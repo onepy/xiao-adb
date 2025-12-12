@@ -64,19 +64,20 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         switchReverseEnabled.setOnCheckedChangeListener { _, isChecked ->
             configManager.reverseConnectionEnabled = isChecked
             
-            val intent = android.content.Intent(requireContext(), com.droidrun.portal.service.ReverseConnectionService::class.java)
+            // TODO: ReverseConnectionService not implemented yet
+            // val intent = android.content.Intent(requireContext(), com.droidrun.portal.service.ReverseConnectionService::class.java)
             if (isChecked) {
                 // Ensure URL is saved before starting
                 val url = inputReverseUrl.text.toString()
                 if (url.isNotBlank()) {
                     configManager.reverseConnectionUrl = url
-                    requireContext().startService(intent)
+                    // requireContext().startService(intent)
                 } else {
                     inputReverseUrl.error = "URL required"
                     switchReverseEnabled.isChecked = false
                 }
             } else {
-                requireContext().stopService(intent)
+                // requireContext().stopService(intent)
             }
         }
 
@@ -87,9 +88,10 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
                 
                 // If enabled, restart service to pick up new URL
                 if (configManager.reverseConnectionEnabled) {
-                    val intent = android.content.Intent(requireContext(), com.droidrun.portal.service.ReverseConnectionService::class.java)
-                    requireContext().stopService(intent)
-                    requireContext().startService(intent)
+                    // TODO: ReverseConnectionService not implemented yet
+                    // val intent = android.content.Intent(requireContext(), com.droidrun.portal.service.ReverseConnectionService::class.java)
+                    // requireContext().stopService(intent)
+                    // requireContext().startService(intent)
                 }
                 true
             } else {
