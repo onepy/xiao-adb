@@ -775,6 +775,46 @@
                             android:textColor="@color/text_gray_light"
                             android:textSize="13sp"
                             android:fontFamily="monospace"
+                            android:paddingStart="16dp"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="/tap"
+                            android:textColor="@color/text_gray_light"
+                            android:textSize="13sp"
+                            android:fontFamily="monospace"
+                            android:paddingStart="16dp"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="/double_tap"
+                            android:textColor="@color/text_gray_light"
+                            android:textSize="13sp"
+                            android:fontFamily="monospace"
+                            android:paddingStart="16dp"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="/long_press"
+                            android:textColor="@color/text_gray_light"
+                            android:textSize="13sp"
+                            android:fontFamily="monospace"
+                            android:paddingStart="16dp"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="/swipe"
+                            android:textColor="@color/text_gray_light"
+                            android:textSize="13sp"
+                            android:fontFamily="monospace"
                             android:paddingStart="16dp" />
                     </LinearLayout>
                 </LinearLayout>
