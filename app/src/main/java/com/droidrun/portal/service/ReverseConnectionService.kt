@@ -129,10 +129,11 @@ class ReverseConnectionService : Service() {
                 Log.i(TAG, "WebSocket connected successfully")
                 reconnectAttempt = 0
                 currentBackoff = INITIAL_BACKOFF
-                updateNotification("已连接")
+                updateNotification("已连接,等待初始化")
+                broadcastStatus(STATUS_CONNECTED, "已连接,等待客户端初始化...")
                 
-                // Send initialize request
-                sendInitialize()
+                // In reverse connection, Android is the SERVER
+                // We wait for initialize request from remote client
             }
             
             override fun onMessage(webSocket: WebSocket, text: String) {
@@ -208,6 +209,14 @@ class ReverseConnectionService : Service() {
         Log.i(TAG, "Handling request: $method")
         
         when (method) {
+            "initialize" -> {
+                val response = createInitializeResponse(id)
+                sendMessage(response.toJson().toString())
+                isInitialized = true
+                Log.i(TAG, "MCP initialized with ${tools.size} tools")
+                updateNotification("已初始化 (${tools.size}个工具)")
+                broadcastStatus(STATUS_CONNECTED, "已成功初始化 (${tools.size}个工具可用)")
+            }
             "tools/list" -> {
                 val response = createToolListResponse(id)
                 sendMessage(response.toJson().toString())
@@ -236,44 +245,22 @@ class ReverseConnectionService : Service() {
         }
         
         Log.d(TAG, "Received response for id: ${response.id}")
-        
-        // Check if this is initialize response
-        if (response.result != null && response.result.has("protocolVersion")) {
-            Log.i(TAG, "Received initialize response")
-            sendInitialized()
-        }
     }
     
-    private fun sendInitialize() {
-        val params = McpInitializeParams(
-            clientInfo = McpClientInfo(
-                name = "Droidrun Portal",
-                version = "1.0.0"
-            )
-        )
-        
-        val request = McpRequest(
-            id = nextMessageId(),
-            method = "initialize",
-            params = params.toJson()
-        )
-        
-        sendMessage(request.toJson().toString())
-        Log.i(TAG, "Sent initialize request")
-    }
-    
-    private fun sendInitialized() {
-        // Send initialized notification
-        val notification = JSONObject().apply {
-            put("jsonrpc", "2.0")
-            put("method", "notifications/initialized")
+    private fun createInitializeResponse(id: Any): McpResponse {
+        val result = JSONObject().apply {
+            put("protocolVersion", "2024-11-05")
+            put("serverInfo", JSONObject().apply {
+                put("name", "Droidrun Portal")
+                put("version", "1.0.0")
+            })
+            put("capabilities", JSONObject().apply {
+                put("tools", JSONObject())
+            })
         }
         
-        sendMessage(notification.toString())
-        isInitialized = true
-        Log.i(TAG, "Sent initialized notification - MCP handshake complete")
-        updateNotification("已初始化 (${tools.size}个工具)")
-        broadcastStatus(STATUS_CONNECTED, "已成功连接并初始化 (${tools.size}个工具可用)")
+        Log.i(TAG, "Returning initialize response")
+        return McpResponse(id = id, result = result)
     }
     
     private fun createToolListResponse(id: Any): McpResponse {
