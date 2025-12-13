@@ -9,12 +9,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.droidrun.portal.R
 import com.droidrun.portal.config.ConfigManager
 import com.droidrun.portal.events.model.EventType
+import com.droidrun.portal.mcp.tools.CalculatorTool
 import com.droidrun.portal.service.ReverseConnectionService
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.switchmaterial.SwitchMaterial
@@ -150,7 +152,64 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
             val dialog = NotificationAppSelectorDialog()
             dialog.show(parentFragmentManager, NotificationAppSelectorDialog.TAG)
         }
+        
+        // Setup MCP Tools List
+        setupMcpToolsList(view)
     }
+    
+    private fun setupMcpToolsList(root: View) {
+        val toolsContainer = root.findViewById<LinearLayout>(R.id.mcp_tools_container)
+        toolsContainer.removeAllViews()
+        
+        // Get all available tools
+        val availableTools = listOf(
+            ToolInfo(
+                name = "calculator",
+                displayName = "Calculator",
+                description = "Mathematical expression evaluation with support for basic operations and functions",
+                toolDefinition = CalculatorTool.getToolDefinition()
+            )
+        )
+        
+        // Add each tool to the container
+        availableTools.forEach { toolInfo ->
+            val toolView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.item_mcp_tool, toolsContainer, false)
+            
+            val toolName = toolView.findViewById<TextView>(R.id.tool_name)
+            val toolDescription = toolView.findViewById<TextView>(R.id.tool_description)
+            val toolSwitch = toolView.findViewById<SwitchMaterial>(R.id.tool_switch)
+            
+            toolName.text = toolInfo.displayName
+            toolDescription.text = toolInfo.description
+            toolSwitch.isChecked = configManager.isMcpToolEnabled(toolInfo.name)
+            
+            toolSwitch.setOnCheckedChangeListener { _, isChecked ->
+                configManager.setMcpToolEnabled(toolInfo.name, isChecked)
+                
+                // If reverse connection is active, restart service to update tools
+                if (configManager.reverseConnectionEnabled) {
+                    val intent = Intent(requireContext(), ReverseConnectionService::class.java)
+                    requireContext().stopService(intent)
+                    requireContext().startService(intent)
+                    Toast.makeText(
+                        requireContext(),
+                        if (isChecked) "已启用 ${toolInfo.displayName}" else "已禁用 ${toolInfo.displayName}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+            
+            toolsContainer.addView(toolView)
+        }
+    }
+    
+    private data class ToolInfo(
+        val name: String,
+        val displayName: String,
+        val description: String,
+        val toolDefinition: com.droidrun.portal.mcp.McpTool
+    )
     
     private fun updateNotificationAppsCount(textView: TextView) {
         val count = configManager.getNotificationWhitelist().size

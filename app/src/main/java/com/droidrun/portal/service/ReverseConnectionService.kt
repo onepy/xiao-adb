@@ -266,8 +266,12 @@ class ReverseConnectionService : Service() {
     private fun createToolListResponse(id: Any): McpResponse {
         val toolsList = mutableListOf<McpTool>()
         
-        // Add calculator tool
-        toolsList.add(CalculatorTool.getToolDefinition())
+        // Only add enabled tools
+        val enabledTools = configManager.getMcpToolsEnabled()
+        
+        if (enabledTools.contains("calculator")) {
+            toolsList.add(CalculatorTool.getToolDefinition())
+        }
         
         val result = JSONObject().apply {
             put("tools", JSONArray().apply {
@@ -275,7 +279,7 @@ class ReverseConnectionService : Service() {
             })
         }
         
-        Log.i(TAG, "Returning ${toolsList.size} tools")
+        Log.i(TAG, "Returning ${toolsList.size} enabled tools")
         return McpResponse(id = id, result = result)
     }
     

@@ -177,6 +177,24 @@
             android:textColor="@color/text_white" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <!-- MCP Tools Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="AVAILABLE MCP TOOLS"
+        android:textColor="@color/text_gray"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="8dp" />
+
+    <LinearLayout
+        android:id="@+id/mcp_tools_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"

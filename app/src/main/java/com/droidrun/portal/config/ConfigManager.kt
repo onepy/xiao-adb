@@ -29,6 +29,7 @@ class ConfigManager private constructor(private val context: Context) {
         private const val KEY_AUTH_TOKEN = "auth_token"
         private const val KEY_AUTH_ENABLED = "auth_enabled"
         private const val KEY_NOTIFICATION_WHITELIST = "notification_whitelist"
+        private const val KEY_MCP_TOOLS_ENABLED = "mcp_tools_enabled"
         
         private const val DEFAULT_OFFSET = 0
         private const val DEFAULT_SOCKET_PORT = 8080
@@ -190,6 +191,42 @@ class ConfigManager private constructor(private val context: Context) {
     
     fun isPackageInNotificationWhitelist(packageName: String): Boolean {
         return getNotificationWhitelist().contains(packageName)
+    }
+    
+    // MCP Tool Management
+    fun getMcpToolsEnabled(): Set<String> {
+        val json = sharedPrefs.getString(KEY_MCP_TOOLS_ENABLED, null)
+        if (json.isNullOrEmpty()) {
+            // Default: all tools enabled
+            return setOf("calculator")
+        }
+        
+        return try {
+            org.json.JSONArray(json).let { array ->
+                (0 until array.length()).map { array.getString(it) }.toSet()
+            }
+        } catch (e: Exception) {
+            setOf("calculator")
+        }
+    }
+    
+    fun setMcpToolsEnabled(tools: Set<String>) {
+        val jsonArray = org.json.JSONArray(tools.toList())
+        sharedPrefs.edit { putString(KEY_MCP_TOOLS_ENABLED, jsonArray.toString()) }
+    }
+    
+    fun isMcpToolEnabled(toolName: String): Boolean {
+        return getMcpToolsEnabled().contains(toolName)
+    }
+    
+    fun setMcpToolEnabled(toolName: String, enabled: Boolean) {
+        val current = getMcpToolsEnabled().toMutableSet()
+        if (enabled) {
+            current.add(toolName)
+        } else {
+            current.remove(toolName)
+        }
+        setMcpToolsEnabled(current)
     }
     
     // Listener interface for configuration changes
