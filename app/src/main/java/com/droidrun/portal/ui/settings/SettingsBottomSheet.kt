@@ -1,14 +1,21 @@
 package com.droidrun.portal.ui.settings
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.TextView
+import android.widget.Toast
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.droidrun.portal.R
 import com.droidrun.portal.config.ConfigManager
 import com.droidrun.portal.events.model.EventType
+import com.droidrun.portal.service.ReverseConnectionService
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
@@ -16,6 +23,30 @@ import com.google.android.material.textfield.TextInputEditText
 class SettingsBottomSheet : BottomSheetDialogFragment() {
 
     private lateinit var configManager: ConfigManager
+    
+    private val connectionStatusReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == ReverseConnectionService.ACTION_CONNECTION_STATUS) {
+                val status = intent.getStringExtra(ReverseConnectionService.EXTRA_STATUS)
+                val message = intent.getStringExtra(ReverseConnectionService.EXTRA_MESSAGE)
+                
+                when (status) {
+                    ReverseConnectionService.STATUS_CONNECTED -> {
+                        Toast.makeText(context, "✓ $message", Toast.LENGTH_SHORT).show()
+                    }
+                    ReverseConnectionService.STATUS_ERROR -> {
+                        Toast.makeText(context, "✗ $message", Toast.LENGTH_LONG).show()
+                    }
+                    ReverseConnectionService.STATUS_CONNECTING -> {
+                        Toast.makeText(context, "⟳ $message", Toast.LENGTH_SHORT).show()
+                    }
+                    ReverseConnectionService.STATUS_DISCONNECTED -> {
+                        Toast.makeText(context, "○ $message", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -28,6 +59,10 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         configManager = ConfigManager.getInstance(requireContext())
+        
+        // Register broadcast receiver for connection status
+        val filter = IntentFilter(ReverseConnectionService.ACTION_CONNECTION_STATUS)
+        LocalBroadcastManager.getInstance(requireContext()).registerReceiver(connectionStatusReceiver, filter)
 
         // Server Settings
         val switchWsEnabled = view.findViewById<SwitchMaterial>(R.id.switch_ws_enabled)
@@ -65,20 +100,22 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         switchReverseEnabled.setOnCheckedChangeListener { _, isChecked ->
             configManager.reverseConnectionEnabled = isChecked
             
-            // TODO: ReverseConnectionService not implemented yet
-            // val intent = android.content.Intent(requireContext(), com.droidrun.portal.service.ReverseConnectionService::class.java)
+            val intent = Intent(requireContext(), ReverseConnectionService::class.java)
             if (isChecked) {
                 // Ensure URL is saved before starting
                 val url = inputReverseUrl.text.toString()
                 if (url.isNotBlank()) {
                     configManager.reverseConnectionUrl = url
-                    // requireContext().startService(intent)
+                    requireContext().startService(intent)
+                    Toast.makeText(requireContext(), "正在启动MCP连接服务...", Toast.LENGTH_SHORT).show()
                 } else {
                     inputReverseUrl.error = "URL required"
                     switchReverseEnabled.isChecked = false
+                    Toast.makeText(requireContext(), "请先输入服务器URL", Toast.LENGTH_SHORT).show()
                 }
             } else {
-                // requireContext().stopService(intent)
+                requireContext().stopService(intent)
+                Toast.makeText(requireContext(), "正在停止MCP连接服务...", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -89,10 +126,10 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
                 
                 // If enabled, restart service to pick up new URL
                 if (configManager.reverseConnectionEnabled) {
-                    // TODO: ReverseConnectionService not implemented yet
-                    // val intent = android.content.Intent(requireContext(), com.droidrun.portal.service.ReverseConnectionService::class.java)
-                    // requireContext().stopService(intent)
-                    // requireContext().startService(intent)
+                    val intent = Intent(requireContext(), ReverseConnectionService::class.java)
+                    requireContext().stopService(intent)
+                    requireContext().startService(intent)
+                    Toast.makeText(requireContext(), "正在重启MCP连接服务...", Toast.LENGTH_SHORT).show()
                 }
                 true
             } else {
@@ -133,6 +170,12 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         }
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // Unregister broadcast receiver
+        LocalBroadcastManager.getInstance(requireContext()).unregisterReceiver(connectionStatusReceiver)
+    }
+    
     companion object {
         const val TAG = "SettingsBottomSheet"
     }
