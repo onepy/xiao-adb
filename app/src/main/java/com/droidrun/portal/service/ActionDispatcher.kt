@@ -51,10 +51,10 @@ class ActionDispatcher(private val apiHandler: ApiHandler) {
                 val actionId = params.optInt("action", 0)
                 apiHandler.performGlobalAction(actionId)
             }
-            "app" -> {
+            "app", "launch_app" -> {
                 val pkg = params.optString("package", "")
                 val activity = params.optString("activity", null)
-                // JSON optString returns "" for missing keys if default not null? 
+                // JSON optString returns "" for missing keys if default not null?
                 // Let's be safe: treat empty string or "null" literal as null
                 val finalActivity = if (activity.isNullOrEmpty() || activity == "null") null else activity
                 apiHandler.startApp(pkg, finalActivity)
