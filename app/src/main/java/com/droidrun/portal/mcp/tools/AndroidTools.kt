@@ -5,6 +5,7 @@ import android.util.Base64
 import android.util.Log
 import com.droidrun.portal.api.ApiHandler
 import com.droidrun.portal.api.ApiResponse
+import com.droidrun.portal.core.A11yTreeCleaner
 import com.droidrun.portal.mcp.McpTool
 import org.json.JSONObject
 
@@ -47,9 +48,12 @@ class GetStateTool(private val apiHandler: ApiHandler) : McpToolHandler {
             
             when (val response = apiHandler.getStateFull(filter)) {
                 is ApiResponse.Success -> {
+                    // 精简数据,避免数据过大导致传输问题
+                    val cleanedData = A11yTreeCleaner.cleanA11yTree(response.data as String)
+                    
                     JSONObject().apply {
                         put("success", true)
-                        put("data", response.data)
+                        put("data", cleanedData)
                     }
                 }
                 is ApiResponse.Error -> {

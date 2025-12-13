@@ -61,6 +61,7 @@ class ReverseConnectionService : Service() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var reconnectAttempt = 0
     private var currentBackoff = INITIAL_BACKOFF
+    private var isFirstConnection = true // 标记是否首次连接
     
     // MCP State
     private var isInitialized = false
@@ -156,7 +157,12 @@ class ReverseConnectionService : Service() {
                 reconnectAttempt = 0
                 currentBackoff = INITIAL_BACKOFF
                 updateNotification("已连接,等待初始化")
-                broadcastStatus(STATUS_CONNECTED, "已连接,等待客户端初始化...")
+                
+                // 只在首次连接时发送广播提示
+                if (isFirstConnection) {
+                    broadcastStatus(STATUS_CONNECTED, "已连接,等待客户端初始化...")
+                    isFirstConnection = false
+                }
                 
                 // In reverse connection, Android is the SERVER
                 // We wait for initialize request from remote client
@@ -241,7 +247,14 @@ class ReverseConnectionService : Service() {
                 isInitialized = true
                 Log.i(TAG, "MCP initialized with ${tools.size} tools")
                 updateNotification("已初始化 (${tools.size}个工具)")
-                broadcastStatus(STATUS_CONNECTED, "已成功初始化 (${tools.size}个工具可用)")
+                
+                // 只在首次初始化时发送广播提示
+                if (!isFirstConnection) {
+                    // 如果不是首次连接(即重连),不显示Toast
+                    Log.i(TAG, "Reconnected and initialized silently")
+                } else {
+                    broadcastStatus(STATUS_CONNECTED, "已成功初始化 (${tools.size}个工具可用)")
+                }
             }
             "tools/list" -> {
                 val response = createToolListResponse(id)
