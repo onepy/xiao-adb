@@ -28,6 +28,17 @@ class ActionDispatcher(private val apiHandler: ApiHandler) {
                 val y = params.optInt("y", 0)
                 apiHandler.performTap(x, y)
             }
+            "double_tap", "doubletap" -> {
+                val x = params.optInt("x", 0)
+                val y = params.optInt("y", 0)
+                apiHandler.performDoubleTap(x, y)
+            }
+            "long_press", "longpress" -> {
+                val x = params.optInt("x", 0)
+                val y = params.optInt("y", 0)
+                val duration = params.optLong("duration", 1000L)
+                apiHandler.performLongPress(x, y, duration)
+            }
             "swipe" -> {
                 val startX = params.optInt("startX", 0)
                 val startY = params.optInt("startY", 0)

@@ -234,6 +234,22 @@ class ApiHandler(
         }
     }
 
+    fun performDoubleTap(x: Int, y: Int): ApiResponse {
+        return if (GestureController.doubleTap(x, y)) {
+            ApiResponse.Success("Double tap performed at ($x, $y)")
+        } else {
+            ApiResponse.Error("Failed to perform double tap at ($x, $y)")
+        }
+    }
+
+    fun performLongPress(x: Int, y: Int, duration: Long = 1000L): ApiResponse {
+        return if (GestureController.longPress(x, y, duration)) {
+            ApiResponse.Success("Long press performed at ($x, $y) for ${duration}ms")
+        } else {
+            ApiResponse.Error("Failed to perform long press at ($x, $y)")
+        }
+    }
+
     fun startApp(packageName: String, activityName: String? = null): ApiResponse {
         val service = DroidrunAccessibilityService.getInstance()
             ?: return ApiResponse.Error("Accessibility Service not available")

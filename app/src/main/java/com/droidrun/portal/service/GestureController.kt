@@ -13,6 +13,8 @@ object GestureController {
     private const val TAG = "GestureController"
     // default
     private const val TAP_DURATION = 50L
+    private const val LONG_PRESS_DURATION = 1000L
+    private const val DOUBLE_TAP_INTERVAL = 100L
 
     /**
      * Perform a tap at specific coordinates.
@@ -74,6 +76,55 @@ object GestureController {
             result
         } catch (e: Exception) {
             Log.e(TAG, "Global action error", e)
+            false
+        }
+    }
+
+    /**
+     * Perform a long press at specific coordinates.
+     * @param durationMs Duration to hold the press (default 1000ms)
+     */
+    fun longPress(x: Int, y: Int, durationMs: Long = LONG_PRESS_DURATION): Boolean {
+        val service = DroidrunAccessibilityService.getInstance() ?: return false
+
+        return try {
+            val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
+            val stroke = GestureDescription.StrokeDescription(path, 0, durationMs)
+            val gesture = GestureDescription.Builder().addStroke(stroke).build()
+            
+            val result = service.dispatchGesture(gesture, null, null)
+            Log.d(TAG, "Long press at ($x, $y) for ${durationMs}ms dispatched: $result")
+            result
+        } catch (e: Exception) {
+            Log.e(TAG, "Long press error", e)
+            false
+        }
+    }
+
+    /**
+     * Perform a double tap at specific coordinates.
+     */
+    fun doubleTap(x: Int, y: Int): Boolean {
+        val service = DroidrunAccessibilityService.getInstance() ?: return false
+
+        return try {
+            val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
+            
+            // First tap
+            val stroke1 = GestureDescription.StrokeDescription(path, 0, TAP_DURATION)
+            // Second tap with interval
+            val stroke2 = GestureDescription.StrokeDescription(path, TAP_DURATION + DOUBLE_TAP_INTERVAL, TAP_DURATION)
+            
+            val gesture = GestureDescription.Builder()
+                .addStroke(stroke1)
+                .addStroke(stroke2)
+                .build()
+            
+            val result = service.dispatchGesture(gesture, null, null)
+            Log.d(TAG, "Double tap at ($x, $y) dispatched: $result")
+            result
+        } catch (e: Exception) {
+            Log.e(TAG, "Double tap error", e)
             false
         }
     }

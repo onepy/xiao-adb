@@ -48,8 +48,8 @@ class PortalWebSocketServer(
             }
         }
 
-        // Validate Token
-        if (token != configManager.authToken) {
+        // Validate Token (only if auth is enabled)
+        if (configManager.authEnabled && token != configManager.authToken) {
             Log.w(TAG, "Rejecting connection: Invalid or missing token")
             throw org.java_websocket.exceptions.InvalidDataException(401, "Unauthorized")
         }
