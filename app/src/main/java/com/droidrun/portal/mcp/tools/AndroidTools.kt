@@ -114,7 +114,7 @@ class GetPackagesTool(private val apiHandler: ApiHandler) : McpToolHandler {
             
             when (val response = apiHandler.getPackages()) {
                 is ApiResponse.Raw -> {
-                    val packages = response.data.getJSONArray("packages")
+                    val packages = response.json.getJSONArray("packages")
                     
                     // Filter based on type
                     val filteredPackages = org.json.JSONArray()
