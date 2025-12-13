@@ -13,10 +13,12 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.droidrun.portal.R
+import com.droidrun.portal.api.ApiHandler
 import com.droidrun.portal.config.ConfigManager
+import com.droidrun.portal.core.StateRepository
+import com.droidrun.portal.input.DroidrunKeyboardIME
 import com.droidrun.portal.mcp.*
-import com.droidrun.portal.mcp.tools.CalculatorTool
-import com.droidrun.portal.mcp.tools.McpToolHandler
+import com.droidrun.portal.mcp.tools.*
 import okhttp3.*
 import okio.ByteString
 import org.json.JSONArray
@@ -49,6 +51,7 @@ class ReverseConnectionService : Service() {
     }
     
     private lateinit var configManager: ConfigManager
+    private lateinit var apiHandler: ApiHandler
     private var webSocket: WebSocket? = null
     private val client = OkHttpClient.Builder()
         .pingInterval(30, TimeUnit.SECONDS)
@@ -68,10 +71,23 @@ class ReverseConnectionService : Service() {
         super.onCreate()
         configManager = ConfigManager.getInstance(this)
         
-        // Register default tools
-        registerTool(CalculatorTool())
-        
-        Log.i(TAG, "Service created with ${tools.size} tools")
+        // Initialize ApiHandler
+        val service = DroidrunAccessibilityService.getInstance()
+        if (service != null) {
+            val stateRepo = StateRepository(service)
+            apiHandler = ApiHandler(
+                stateRepo = stateRepo,
+                getKeyboardIME = { DroidrunKeyboardIME.getInstance() },
+                getPackageManager = { packageManager },
+                appVersionProvider = { "1.0.0" }
+            )
+            
+            // Register all tools
+            registerAllTools()
+            Log.i(TAG, "Service created with ${tools.size} tools")
+        } else {
+            Log.e(TAG, "Failed to initialize: AccessibilityService not available")
+        }
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -97,13 +113,23 @@ class ReverseConnectionService : Service() {
         broadcastStatus(STATUS_DISCONNECTED, "服务已停止")
     }
     
-    private fun registerTool(handler: McpToolHandler) {
-        when (handler) {
-            is CalculatorTool -> {
-                tools["calculator"] = handler
-                Log.i(TAG, "Registered calculator tool")
-            }
-        }
+    private fun registerAllTools() {
+        // Math tool
+        tools["calculator"] = CalculatorTool()
+        
+        // Android operation tools
+        tools["get_state"] = GetStateTool(apiHandler)
+        tools["get_packages"] = GetPackagesTool(apiHandler)
+        tools["launch_app"] = LaunchAppTool(apiHandler)
+        tools["input_text"] = InputTextTool(apiHandler)
+        tools["clear_text"] = ClearTextTool(apiHandler)
+        tools["press_key"] = PressKeyTool(apiHandler)
+        tools["tap"] = TapTool(apiHandler)
+        tools["double_tap"] = DoubleTapTool(apiHandler)
+        tools["long_press"] = LongPressTool(apiHandler)
+        tools["swipe"] = SwipeTool(apiHandler)
+        
+        Log.i(TAG, "Registered ${tools.size} tools")
     }
     
     private fun connectToServer() {
@@ -269,8 +295,24 @@ class ReverseConnectionService : Service() {
         // Only add enabled tools
         val enabledTools = configManager.getMcpToolsEnabled()
         
-        if (enabledTools.contains("calculator")) {
-            toolsList.add(CalculatorTool.getToolDefinition())
+        // Map of tool names to their definitions
+        val toolDefinitions = mapOf(
+            "calculator" to CalculatorTool.getToolDefinition(),
+            "get_state" to GetStateTool.getToolDefinition(),
+            "get_packages" to GetPackagesTool.getToolDefinition(),
+            "launch_app" to LaunchAppTool.getToolDefinition(),
+            "input_text" to InputTextTool.getToolDefinition(),
+            "clear_text" to ClearTextTool.getToolDefinition(),
+            "press_key" to PressKeyTool.getToolDefinition(),
+            "tap" to TapTool.getToolDefinition(),
+            "double_tap" to DoubleTapTool.getToolDefinition(),
+            "long_press" to LongPressTool.getToolDefinition(),
+            "swipe" to SwipeTool.getToolDefinition()
+        )
+        
+        // Add only enabled tools to the list
+        enabledTools.forEach { toolName ->
+            toolDefinitions[toolName]?.let { toolsList.add(it) }
         }
         
         val result = JSONObject().apply {

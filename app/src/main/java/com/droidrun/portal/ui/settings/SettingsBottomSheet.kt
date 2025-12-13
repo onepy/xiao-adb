@@ -166,8 +166,68 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
             ToolInfo(
                 name = "calculator",
                 displayName = "Calculator",
-                description = "Mathematical expression evaluation with support for basic operations and functions",
+                description = "Mathematical expression evaluation",
                 toolDefinition = CalculatorTool.getToolDefinition()
+            ),
+            ToolInfo(
+                name = "get_state",
+                displayName = "Get State",
+                description = "Get current phone state and accessibility tree",
+                toolDefinition = com.droidrun.portal.mcp.tools.GetStateTool.getToolDefinition()
+            ),
+            ToolInfo(
+                name = "get_packages",
+                displayName = "Get Packages",
+                description = "List installed applications",
+                toolDefinition = com.droidrun.portal.mcp.tools.GetPackagesTool.getToolDefinition()
+            ),
+            ToolInfo(
+                name = "launch_app",
+                displayName = "Launch App",
+                description = "Start an application by package name",
+                toolDefinition = com.droidrun.portal.mcp.tools.LaunchAppTool.getToolDefinition()
+            ),
+            ToolInfo(
+                name = "input_text",
+                displayName = "Input Text",
+                description = "Type text into focused field",
+                toolDefinition = com.droidrun.portal.mcp.tools.InputTextTool.getToolDefinition()
+            ),
+            ToolInfo(
+                name = "clear_text",
+                displayName = "Clear Text",
+                description = "Clear text from focused field",
+                toolDefinition = com.droidrun.portal.mcp.tools.ClearTextTool.getToolDefinition()
+            ),
+            ToolInfo(
+                name = "press_key",
+                displayName = "Press Key",
+                description = "Simulate key press (ENTER, BACK, etc)",
+                toolDefinition = com.droidrun.portal.mcp.tools.PressKeyTool.getToolDefinition()
+            ),
+            ToolInfo(
+                name = "tap",
+                displayName = "Tap",
+                description = "Single tap at coordinates",
+                toolDefinition = com.droidrun.portal.mcp.tools.TapTool.getToolDefinition()
+            ),
+            ToolInfo(
+                name = "double_tap",
+                displayName = "Double Tap",
+                description = "Double tap at coordinates",
+                toolDefinition = com.droidrun.portal.mcp.tools.DoubleTapTool.getToolDefinition()
+            ),
+            ToolInfo(
+                name = "long_press",
+                displayName = "Long Press",
+                description = "Long press at coordinates",
+                toolDefinition = com.droidrun.portal.mcp.tools.LongPressTool.getToolDefinition()
+            ),
+            ToolInfo(
+                name = "swipe",
+                displayName = "Swipe",
+                description = "Swipe gesture between two points",
+                toolDefinition = com.droidrun.portal.mcp.tools.SwipeTool.getToolDefinition()
             )
         )
         
