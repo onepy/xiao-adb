@@ -16,23 +16,21 @@ object A11yTreeCleaner {
     
     /**
      * 清理并精简无障碍树数据
+     * @param rawJson 直接的JSON字符串,包含a11y_tree和phone_state
      */
     fun cleanA11yTree(rawJson: String): String {
         return try {
             val root = JSONObject(rawJson)
-            val data = root.optString("data", null) ?: return "数据格式错误"
-            
-            val inner = JSONObject(data)
             val result = StringBuilder()
             
             // 1. 精简 phone_state
-            appendPhoneState(inner, result)
+            appendPhoneState(root, result)
             
             // 2. 提取屏幕宽高
-            appendScreenSize(inner, result)
+            appendScreenSize(root, result)
             
             // 3. 提取可交互元素
-            val elementCount = appendInteractiveElements(inner, result)
+            val elementCount = appendInteractiveElements(root, result)
             
             Log.i(TAG, "A11y tree cleaned: ${rawJson.length} -> ${result.length} bytes, $elementCount elements")
             
