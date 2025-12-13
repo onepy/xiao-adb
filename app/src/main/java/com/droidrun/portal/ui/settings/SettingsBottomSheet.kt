@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import android.widget.TextView
 import com.droidrun.portal.R
 import com.droidrun.portal.config.ConfigManager
 import com.droidrun.portal.events.model.EventType
@@ -101,6 +102,26 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
 
         // Event Filters
         setupEventToggle(view, R.id.switch_event_notification, EventType.NOTIFICATION)
+        
+        // Notification Apps Selector
+        val notificationAppsSelector = view.findViewById<View>(R.id.notification_apps_selector)
+        val notificationAppsCount = view.findViewById<TextView>(R.id.notification_apps_count)
+        
+        updateNotificationAppsCount(notificationAppsCount)
+        
+        notificationAppsSelector.setOnClickListener {
+            val dialog = NotificationAppSelectorDialog()
+            dialog.show(parentFragmentManager, NotificationAppSelectorDialog.TAG)
+        }
+    }
+    
+    private fun updateNotificationAppsCount(textView: TextView) {
+        val count = configManager.getNotificationWhitelist().size
+        textView.text = if (count > 0) {
+            "已选择 $count 个应用"
+        } else {
+            "所有应用 (未限制)"
+        }
     }
 
     private fun setupEventToggle(root: View, switchId: Int, type: EventType) {

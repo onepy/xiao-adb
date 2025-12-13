@@ -3,6 +3,7 @@ package com.droidrun.portal.service
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import com.droidrun.portal.config.ConfigManager
 import com.droidrun.portal.events.EventHub
 import com.droidrun.portal.events.model.EventType
 import com.droidrun.portal.events.model.PortalEvent
@@ -13,9 +14,12 @@ class DroidrunNotificationListener : NotificationListenerService() {
     companion object {
         private const val TAG = "DroidrunNotifListener"
     }
+    
+    private lateinit var configManager: ConfigManager
 
     override fun onListenerConnected() {
         super.onListenerConnected()
+        configManager = ConfigManager.getInstance(this)
         Log.i(TAG, "Notification Listener Connected")
     }
 
@@ -23,11 +27,20 @@ class DroidrunNotificationListener : NotificationListenerService() {
         if (sbn == null) return
 
         try {
+            // Check if package is in whitelist
+            val packageName = sbn.packageName
+            val whitelist = configManager.getNotificationWhitelist()
+            
+            // If whitelist is not empty and package is not in whitelist, ignore
+            if (whitelist.isNotEmpty() && !whitelist.contains(packageName)) {
+                Log.v(TAG, "Ignoring notification from $packageName (not in whitelist)")
+                return
+            }
+            
             // 1. Extract Data safely
             val extras = sbn.notification.extras
             val title = extras.getString("android.title")?.toString() ?: ""
             val text = extras.getCharSequence("android.text")?.toString() ?: ""
-            val packageName = sbn.packageName
 
             // 2. Create our clean Payload object
             val payload = JSONObject().apply {

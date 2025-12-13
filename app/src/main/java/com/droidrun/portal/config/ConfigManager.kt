@@ -28,6 +28,7 @@ class ConfigManager private constructor(private val context: Context) {
         private const val PREFIX_EVENT_ENABLED = "event_enabled_"
         private const val KEY_AUTH_TOKEN = "auth_token"
         private const val KEY_AUTH_ENABLED = "auth_enabled"
+        private const val KEY_NOTIFICATION_WHITELIST = "notification_whitelist"
         
         private const val DEFAULT_OFFSET = 0
         private const val DEFAULT_SOCKET_PORT = 8080
@@ -143,6 +144,41 @@ class ConfigManager private constructor(private val context: Context) {
     fun setEventEnabled(type: EventType, enabled: Boolean) {
         sharedPrefs.edit { putBoolean(PREFIX_EVENT_ENABLED + type.name, enabled) }
         // We could notify listeners here if needed, but usually this is polled by EventHub
+    }
+    
+    // Notification Package Whitelist Management
+    fun getNotificationWhitelist(): Set<String> {
+        val json = sharedPrefs.getString(KEY_NOTIFICATION_WHITELIST, null)
+        if (json.isNullOrEmpty()) return emptySet()
+        
+        return try {
+            org.json.JSONArray(json).let { array ->
+                (0 until array.length()).map { array.getString(it) }.toSet()
+            }
+        } catch (e: Exception) {
+            emptySet()
+        }
+    }
+    
+    fun setNotificationWhitelist(packages: Set<String>) {
+        val jsonArray = org.json.JSONArray(packages.toList())
+        sharedPrefs.edit { putString(KEY_NOTIFICATION_WHITELIST, jsonArray.toString()) }
+    }
+    
+    fun addToNotificationWhitelist(packageName: String) {
+        val current = getNotificationWhitelist().toMutableSet()
+        current.add(packageName)
+        setNotificationWhitelist(current)
+    }
+    
+    fun removeFromNotificationWhitelist(packageName: String) {
+        val current = getNotificationWhitelist().toMutableSet()
+        current.remove(packageName)
+        setNotificationWhitelist(current)
+    }
+    
+    fun isPackageInNotificationWhitelist(packageName: String): Boolean {
+        return getNotificationWhitelist().contains(packageName)
     }
     
     // Listener interface for configuration changes
