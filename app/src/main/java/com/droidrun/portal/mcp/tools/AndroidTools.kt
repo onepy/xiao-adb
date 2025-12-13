@@ -49,7 +49,7 @@ class GetStateTool(private val apiHandler: ApiHandler) : McpToolHandler {
                 is ApiResponse.Success -> {
                     JSONObject().apply {
                         put("success", true)
-                        put("data", JSONObject(response.data))
+                        put("data", response.data)
                     }
                 }
                 is ApiResponse.Error -> {
@@ -114,8 +114,7 @@ class GetPackagesTool(private val apiHandler: ApiHandler) : McpToolHandler {
             
             when (val response = apiHandler.getPackages()) {
                 is ApiResponse.Raw -> {
-                    val data = response.data
-                    val packages = data.getJSONArray("packages")
+                    val packages = response.data.getJSONArray("packages")
                     
                     // Filter based on type
                     val filteredPackages = org.json.JSONArray()
@@ -124,9 +123,9 @@ class GetPackagesTool(private val apiHandler: ApiHandler) : McpToolHandler {
                         val isSystem = pkg.getBoolean("isSystemApp")
                         
                         when (filterType) {
-                            "user" -> if (!isSystem) filteredPackages.put(pkg)
-                            "system" -> if (isSystem) filteredPackages.put(pkg)
-                            else -> filteredPackages.put(pkg)
+                            "user" -> if (!isSystem) filteredPackages.put(pkg as Any)
+                            "system" -> if (isSystem) filteredPackages.put(pkg as Any)
+                            else -> filteredPackages.put(pkg as Any)
                         }
                     }
                     
