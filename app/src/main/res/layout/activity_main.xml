@@ -256,6 +256,22 @@
                         android:textColor="@color/text_white"
                         android:layout_marginBottom="15dp" />
 
+                    <!-- Switch Input Method Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_switch_ime"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="切换输入法"
+                        android:textSize="14sp"
+                        android:textColor="@color/text_white"
+                        app:backgroundTint="@color/background_secondary"
+                        app:cornerRadius="8dp"
+                        app:icon="@drawable/circular_keyboard_icon"
+                        app:iconTint="@color/text_white"
+                        app:iconGravity="start"
+                        android:layout_marginBottom="12dp"
+                        style="@style/Widget.MaterialComponents.Button.UnelevatedButton" />
+
                     <!-- Overlay Toggle -->
                     <LinearLayout
                         android:layout_width="match_parent"

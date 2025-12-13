@@ -51,6 +51,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var logsLink: TextView
     private lateinit var toggleOverlay: SwitchMaterial
     private lateinit var fetchButton: MaterialButton
+    private lateinit var btnSwitchIme: MaterialButton
     private lateinit var offsetSlider: SeekBar
     private lateinit var offsetValueDisplay: TextInputEditText
     private lateinit var offsetValueInputLayout: TextInputLayout
@@ -127,6 +128,7 @@ class MainActivity : AppCompatActivity() {
         versionText = findViewById(R.id.version_text)
         logsLink = findViewById(R.id.logs_link)
         fetchButton = findViewById(R.id.fetch_button)
+        btnSwitchIme = findViewById(R.id.btn_switch_ime)
         toggleOverlay = findViewById(R.id.toggle_overlay)
         offsetSlider = findViewById(R.id.offset_slider)
         offsetValueDisplay = findViewById(R.id.offset_value_display)
@@ -159,6 +161,10 @@ class MainActivity : AppCompatActivity() {
         
         fetchButton.setOnClickListener {
             fetchElementData()
+        }
+        
+        btnSwitchIme.setOnClickListener {
+            openInputMethodPicker()
         }
 
         toggleOverlay.setOnCheckedChangeListener { _, isChecked ->
@@ -836,5 +842,16 @@ class MainActivity : AppCompatActivity() {
             }
             .create()
             .show()
+    }
+    
+    private fun openInputMethodPicker() {
+        try {
+            val inputMethodManager = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+            inputMethodManager.showInputMethodPicker()
+            Toast.makeText(this, "请选择输入法", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Log.e("DROIDRUN_MAIN", "Error opening input method picker: ${e.message}")
+            Toast.makeText(this, "打开输入法选择器失败", Toast.LENGTH_SHORT).show()
+        }
     }
 }
