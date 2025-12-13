@@ -570,6 +570,18 @@
                                 android:maxLines="1" />
 
                             <ImageView
+                                android:id="@+id/btn_edit_token"
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:contentDescription="Edit token"
+                                android:src="@drawable/settings"
+                                app:tint="@color/text_white"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:layout_marginEnd="8dp" />
+
+                            <ImageView
                                 android:id="@+id/btn_copy_token"
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"

@@ -84,6 +84,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var deviceIpText: TextView
     private lateinit var authTokenText: TextView
     private lateinit var btnCopyToken: View
+    private lateinit var btnEditToken: View
     private lateinit var toggleAuthEnabled: SwitchMaterial
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -96,6 +97,7 @@ class MainActivity : AppCompatActivity() {
         deviceIpText = findViewById(R.id.device_ip_text)
         authTokenText = findViewById(R.id.auth_token_text)
         btnCopyToken = findViewById(R.id.btn_copy_token)
+        btnEditToken = findViewById(R.id.btn_edit_token)
         toggleAuthEnabled = findViewById(R.id.toggle_auth_enabled)
 
         setupNetworkInfo()
@@ -220,7 +222,11 @@ class MainActivity : AppCompatActivity() {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val clip = android.content.ClipData.newPlainText("Auth Token", configManager.authToken)
             clipboard.setPrimaryClip(clip)
-            Toast.makeText(this, "Token copied", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Token已复制", Toast.LENGTH_SHORT).show()
+        }
+        
+        btnEditToken.setOnClickListener {
+            showEditTokenDialog()
         }
 
         deviceIpText.text = getIpAddress() ?: "Unavailable (Check WiFi)"
@@ -783,5 +789,52 @@ class MainActivity : AppCompatActivity() {
             Log.e("DROIDRUN_MAIN", "Error showing logs dialog: ${e.message}")
             Toast.makeText(this, "Error showing logs: ${e.message}", Toast.LENGTH_SHORT).show()
         }
+    }
+    
+    private fun showEditTokenDialog() {
+        val configManager = ConfigManager.getInstance(this)
+        val currentToken = configManager.authToken
+        
+        val input = TextInputEditText(this).apply {
+            setText(currentToken)
+            hint = "输入自定义Token"
+            setSingleLine(true)
+        }
+        
+        val inputLayout = TextInputLayout(this).apply {
+            addView(input)
+            setPadding(60, 20, 60, 0)
+        }
+        
+        AlertDialog.Builder(this)
+            .setTitle("编辑Auth Token")
+            .setMessage("留空将生成新的随机Token")
+            .setView(inputLayout)
+            .setPositiveButton("保存") { dialog, _ ->
+                val newToken = input.text.toString().trim()
+                if (newToken.isEmpty()) {
+                    // Generate new random token
+                    val generated = configManager.generateNewAuthToken()
+                    authTokenText.text = generated
+                    Toast.makeText(this, "已生成新Token", Toast.LENGTH_SHORT).show()
+                } else {
+                    // Use custom token
+                    configManager.setAuthToken(newToken)
+                    authTokenText.text = newToken
+                    Toast.makeText(this, "Token已更新", Toast.LENGTH_SHORT).show()
+                }
+                dialog.dismiss()
+            }
+            .setNegativeButton("取消") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setNeutralButton("生成新Token") { dialog, _ ->
+                val generated = configManager.generateNewAuthToken()
+                authTokenText.text = generated
+                Toast.makeText(this, "已生成新Token", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            }
+            .create()
+            .show()
     }
 }

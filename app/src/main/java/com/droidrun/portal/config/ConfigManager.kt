@@ -46,8 +46,7 @@ class ConfigManager private constructor(private val context: Context) {
     
     private val sharedPrefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     
-    // Auth Token (Auto-generated if missing)
-    // TODO add external injection from some config file
+    // Auth Token (Auto-generated if missing, or user-defined)
     val authToken: String
         get() {
             var token = sharedPrefs.getString(KEY_AUTH_TOKEN, null)
@@ -57,6 +56,18 @@ class ConfigManager private constructor(private val context: Context) {
             }
             return token
         }
+    
+    // Set custom auth token
+    fun setAuthToken(token: String) {
+        sharedPrefs.edit { putString(KEY_AUTH_TOKEN, token) }
+    }
+    
+    // Generate new random token
+    fun generateNewAuthToken(): String {
+        val token = java.util.UUID.randomUUID().toString()
+        sharedPrefs.edit { putString(KEY_AUTH_TOKEN, token) }
+        return token
+    }
 
     // Auth Token Verification Enabled
     var authEnabled: Boolean
