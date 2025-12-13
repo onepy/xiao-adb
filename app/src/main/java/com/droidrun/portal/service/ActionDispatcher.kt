@@ -20,7 +20,7 @@ class ActionDispatcher(private val apiHandler: ApiHandler) {
      */
     fun dispatch(action: String, params: JSONObject): ApiResponse {
         // Normalize action name (handle both "action.tap" and "/action/tap" styles)
-        val method = action.removePrefix("/action/").removePrefix("action.")
+        val method = action.removePrefix("/action/").removePrefix("action.").removePrefix("/")
 
         return when (method) {
             "tap" -> {
