@@ -14,14 +14,23 @@ object AdbHelper {
     
     /**
      * 检测ADB是否可用
+     * 直接尝试执行adb命令来检测
      */
     fun isAdbAvailable(): Boolean {
         return try {
-            val process = Runtime.getRuntime().exec(arrayOf("which", "adb"))
+            // 直接执行 adb version 来检测
+            val process = Runtime.getRuntime().exec("adb version")
             val exitCode = process.waitFor()
-            exitCode == 0
+            
+            if (exitCode == 0) {
+                Log.i(TAG, "ADB detected successfully")
+                true
+            } else {
+                Log.w(TAG, "ADB command failed with exit code: $exitCode")
+                false
+            }
         } catch (e: Exception) {
-            Log.w(TAG, "ADB not found", e)
+            Log.w(TAG, "ADB not available", e)
             false
         }
     }

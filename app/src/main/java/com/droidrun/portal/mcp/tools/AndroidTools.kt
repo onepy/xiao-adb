@@ -33,8 +33,8 @@ class GetStateTool(private val apiHandler: ApiHandler) : McpToolHandler {
             }
             
             return McpTool(
-                name = "get_state",
-                description = "Get current phone state including full accessibility tree XML and device context. Returns comprehensive screen information.",
+                name = "android.screen.dump",
+                description = "Dump the UI hierarchy return as XML\n获取当前屏幕交互内容,适合及时性的交互操作,但是无法获取完整页面信息。",
                 inputSchema = inputSchema
             )
         }
@@ -48,12 +48,12 @@ class GetStateTool(private val apiHandler: ApiHandler) : McpToolHandler {
             
             when (val response = apiHandler.getStateFull(filter)) {
                 is ApiResponse.Success -> {
-                    // 精简数据,避免数据过大导致传输问题
-                    val cleanedData = A11yTreeCleaner.cleanA11yTree(response.data as String)
+                    // 临时禁用数据精简,返回完整JSON
+                    // val cleanedData = A11yTreeCleaner.cleanA11yTree(response.data as String)
                     
                     JSONObject().apply {
                         put("success", true)
-                        put("data", cleanedData)
+                        put("data", response.data)
                     }
                 }
                 is ApiResponse.Error -> {
@@ -89,22 +89,21 @@ class GetPackagesTool(private val apiHandler: ApiHandler) : McpToolHandler {
             val inputSchema = JSONObject().apply {
                 put("type", "object")
                 put("properties", JSONObject().apply {
-                    put("type", JSONObject().apply {
+                    put("filter", JSONObject().apply {
                         put("type", "string")
                         put("enum", org.json.JSONArray().apply {
-                            put("all")
                             put("user")
                             put("system")
                         })
-                        put("description", "Filter packages by type: 'all' (default), 'user' (user-installed), or 'system' (system apps)")
-                        put("default", "all")
+                        put("description", "过滤类型: 'user'(仅用户应用,默认) 或 'system'(仅系统应用)")
+                        put("default", "user")
                     })
                 })
             }
             
             return McpTool(
-                name = "get_packages",
-                description = "Get list of installed applications with package names, labels, and version info. Can filter by user/system apps.",
+                name = "android.packages.list",
+                description = "获取 Android 手机已安装的应用列表,返回精简的应用信息(应用名、包名、是否系统应用)。参数说明:\n- filter: 可选,过滤类型。可选值:user(仅用户应用)、system(仅系统应用),默认为 user",
                 inputSchema = inputSchema
             )
         }
@@ -112,7 +111,7 @@ class GetPackagesTool(private val apiHandler: ApiHandler) : McpToolHandler {
     
     override fun execute(arguments: JSONObject?): JSONObject {
         return try {
-            val filterType = arguments?.optString("type", "all") ?: "all"
+            val filterType = arguments?.optString("type", "user") ?: "user"
             
             Log.i(TAG, "Getting packages with filter=$filterType")
             
@@ -120,16 +119,27 @@ class GetPackagesTool(private val apiHandler: ApiHandler) : McpToolHandler {
                 is ApiResponse.Raw -> {
                     val packages = response.json.getJSONArray("packages")
                     
-                    // Filter based on type
+                    // Filter based on type and create simplified packages
                     val filteredPackages = org.json.JSONArray()
                     for (i in 0 until packages.length()) {
                         val pkg = packages.getJSONObject(i)
                         val isSystem = pkg.getBoolean("isSystemApp")
                         
-                        when (filterType) {
-                            "user" -> if (!isSystem) filteredPackages.put(pkg as Any)
-                            "system" -> if (isSystem) filteredPackages.put(pkg as Any)
-                            else -> filteredPackages.put(pkg as Any)
+                        // Apply filter
+                        val shouldInclude = when (filterType) {
+                            "user" -> !isSystem
+                            "system" -> isSystem
+                            else -> true
+                        }
+                        
+                        if (shouldInclude) {
+                            // Create simplified package info (only packageName, label, isSystemApp)
+                            val simplifiedPkg = JSONObject().apply {
+                                put("packageName", pkg.getString("packageName"))
+                                put("label", pkg.getString("label"))
+                                put("isSystemApp", isSystem)
+                            }
+                            filteredPackages.put(simplifiedPkg as Any)
                         }
                     }
                     
@@ -185,8 +195,8 @@ class LaunchAppTool(private val apiHandler: ApiHandler) : McpToolHandler {
             }
             
             return McpTool(
-                name = "launch_app",
-                description = "Launch an Android application by package name. Optionally specify an activity to start directly.",
+                name = "android.launch_app",
+                description = "启动指定的 Android 应用。参数说明:\n- package: 必需,应用的包名(如 com.taobao.taobao)",
                 inputSchema = inputSchema
             )
         }
@@ -254,8 +264,8 @@ class InputTextTool(private val apiHandler: ApiHandler) : McpToolHandler {
             }
             
             return McpTool(
-                name = "input_text",
-                description = "Input text into the currently focused field. Text is automatically Base64 encoded for proper handling.",
+                name = "android.text.input",
+                description = "在当前聚焦的输入框输入文本。参数说明:\n- text: 要输入的文本内容",
                 inputSchema = inputSchema
             )
         }
@@ -315,8 +325,8 @@ class ClearTextTool(private val apiHandler: ApiHandler) : McpToolHandler {
             }
             
             return McpTool(
-                name = "clear_text",
-                description = "Clear all text from the currently focused input field.",
+                name = "android.input.clear",
+                description = "清除 Android 手机当前输入框中的文本。",
                 inputSchema = inputSchema
             )
         }
@@ -375,8 +385,8 @@ class PressKeyTool(private val apiHandler: ApiHandler) : McpToolHandler {
             }
             
             return McpTool(
-                name = "press_key",
-                description = "Simulate pressing an Android key. Common codes: ENTER(66), BACKSPACE(67), BACK(4), HOME(3).",
+                name = "android.key.send",
+                description = "发送 Android KeyEvent 按键码。参数说明:\n- key_code: 必需,Android KeyEvent 键码(整数)\n\n常用按键码参考:\n- 3: HOME (主页键)\n- 4: BACK (返回键)\n- 24: VOLUME_UP (音量+)\n- 25: VOLUME_DOWN (音量-)\n- 26: POWER (电源键)\n- 66: ENTER (回车键)\n- 67: DEL (删除键)\n- 82: MENU (菜单键)\n- 187: APP_SWITCH (最近应用键)",
                 inputSchema = inputSchema
             )
         }
@@ -445,8 +455,8 @@ class TapTool(private val apiHandler: ApiHandler) : McpToolHandler {
             }
             
             return McpTool(
-                name = "tap",
-                description = "Perform a single tap at specified coordinates.",
+                name = "android.tap",
+                description = "点击手机屏幕指定坐标位置。参数说明:\n- x: 点击的X坐标(整数)\n- y: 点击的Y坐标(整数)",
                 inputSchema = inputSchema
             )
         }
@@ -515,8 +525,8 @@ class DoubleTapTool(private val apiHandler: ApiHandler) : McpToolHandler {
             }
             
             return McpTool(
-                name = "double_tap",
-                description = "Perform a double tap at specified coordinates.",
+                name = "android.double_tap",
+                description = "双击手机屏幕指定坐标位置。参数说明:\n- x: 双击的X坐标(整数)\n- y: 双击的Y坐标(整数)",
                 inputSchema = inputSchema
             )
         }
@@ -590,8 +600,8 @@ class LongPressTool(private val apiHandler: ApiHandler) : McpToolHandler {
             }
             
             return McpTool(
-                name = "long_press",
-                description = "Perform a long press at specified coordinates with customizable duration.",
+                name = "android.long_press",
+                description = "长按手机屏幕指定坐标位置。参数说明:\n- x: 长按的X坐标(整数)\n- y: 长按的Y坐标(整数)\n- duration: 可选,长按时长(毫秒),默认1000ms",
                 inputSchema = inputSchema
             )
         }
@@ -676,8 +686,8 @@ class SwipeTool(private val apiHandler: ApiHandler) : McpToolHandler {
             }
             
             return McpTool(
-                name = "swipe",
-                description = "Perform a swipe gesture from start coordinates to end coordinates with customizable duration.",
+                name = "android.swipe",
+                description = "在手机屏幕上执行滑动操作。参数说明:\n- startX: 起始X坐标(整数)\n- startY: 起始Y坐标(整数)\n- endX: 结束X坐标(整数)\n- endY: 结束Y坐标(整数)\n- duration: 可选,滑动时长(毫秒),默认300ms",
                 inputSchema = inputSchema
             )
         }

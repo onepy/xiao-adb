@@ -157,6 +157,9 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         
         // Setup MCP Tools List
         setupMcpToolsList(view)
+        
+        // Setup ADB Tools List (separate section)
+        setupAdbToolsList(view)
     }
     
     private fun setupMcpToolsList(root: View) {
@@ -236,30 +239,7 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
             )
         )
         
-        // ADB tools (conditionally added)
-        val adbTools = if (adbAvailable) {
-            listOf(
-                ToolInfo(
-                    name = "adb_device_info",
-                    displayName = "ADB Device Info",
-                    description = "Query battery, volume via ADB",
-                    toolDefinition = AdbDeviceInfoTool.getToolDefinition()
-                )
-            )
-        } else {
-            emptyList()
-        }
-        
-        // Add accessibility tools section header
-        val sectionHeader = TextView(requireContext()).apply {
-            text = "无障碍工具 (${accessibilityTools.size})"
-            textSize = 12f
-            setTextColor(resources.getColor(android.R.color.darker_gray, null))
-            setPadding(24.dpToPx(), 8.dpToPx(), 24.dpToPx(), 8.dpToPx())
-        }
-        toolsContainer.addView(sectionHeader)
-        
-        // Add each accessibility tool to the container
+        // Add each accessibility tool to the container (only accessibility tools)
         accessibilityTools.forEach { toolInfo ->
             val toolView = LayoutInflater.from(requireContext())
                 .inflate(R.layout.item_mcp_tool, toolsContainer, false)
@@ -290,20 +270,37 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
             
             toolsContainer.addView(toolView)
         }
+    }
+    
+    private fun setupAdbToolsList(root: View) {
+        val adbSection = root.findViewById<LinearLayout>(R.id.adb_tools_section)
+        adbSection.removeAllViews()
+        
+        // 检查ADB是否可用
+        val adbAvailable = AdbHelper.isAdbAvailable()
         
         // Add ADB tools section if available
-        if (adbTools.isNotEmpty()) {
+        if (adbAvailable) {
+            val adbTools = listOf(
+                ToolInfo(
+                    name = "adb_device_info",
+                    displayName = "ADB Device Info",
+                    description = "Query battery, volume via ADB",
+                    toolDefinition = AdbDeviceInfoTool.getToolDefinition()
+                )
+            )
+            
             val adbSectionHeader = TextView(requireContext()).apply {
                 text = "ADB工具 (${adbTools.size}) ✓ ADB已安装"
                 textSize = 12f
                 setTextColor(resources.getColor(android.R.color.holo_green_dark, null))
-                setPadding(24.dpToPx(), 16.dpToPx(), 24.dpToPx(), 8.dpToPx())
+                setPadding(24.dpToPx(), 8.dpToPx(), 24.dpToPx(), 8.dpToPx())
             }
-            toolsContainer.addView(adbSectionHeader)
+            adbSection.addView(adbSectionHeader)
             
             adbTools.forEach { toolInfo ->
                 val toolView = LayoutInflater.from(requireContext())
-                    .inflate(R.layout.item_mcp_tool, toolsContainer, false)
+                    .inflate(R.layout.item_mcp_tool, adbSection, false)
                 
                 val toolName = toolView.findViewById<TextView>(R.id.tool_name)
                 val toolDescription = toolView.findViewById<TextView>(R.id.tool_description)
@@ -329,16 +326,16 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
                     }
                 }
                 
-                toolsContainer.addView(toolView)
+                adbSection.addView(toolView)
             }
         } else {
             val adbWarning = TextView(requireContext()).apply {
                 text = "ADB工具 (0) ✗ 未检测到ADB\n提示: 在Termux中运行 'pkg install android-tools' 安装"
                 textSize = 12f
                 setTextColor(resources.getColor(android.R.color.holo_orange_dark, null))
-                setPadding(24.dpToPx(), 16.dpToPx(), 24.dpToPx(), 8.dpToPx())
+                setPadding(24.dpToPx(), 8.dpToPx(), 24.dpToPx(), 8.dpToPx())
             }
-            toolsContainer.addView(adbWarning)
+            adbSection.addView(adbWarning)
         }
     }
     
