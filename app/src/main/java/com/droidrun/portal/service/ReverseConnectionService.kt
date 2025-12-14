@@ -120,24 +120,19 @@ class ReverseConnectionService : Service() {
         tools["calculator"] = CalculatorTool()
         
         // Android operation tools (无障碍服务)
-        tools["get_state"] = GetStateTool(apiHandler)
-        tools["get_packages"] = GetPackagesTool(apiHandler)
-        tools["launch_app"] = LaunchAppTool(apiHandler)
-        tools["input_text"] = InputTextTool(apiHandler)
-        tools["clear_text"] = ClearTextTool(apiHandler)
-        tools["press_key"] = PressKeyTool(apiHandler)
-        tools["tap"] = TapTool(apiHandler)
-        tools["double_tap"] = DoubleTapTool(apiHandler)
-        tools["long_press"] = LongPressTool(apiHandler)
-        tools["swipe"] = SwipeTool(apiHandler)
+        tools["android.screen.dump"] = GetStateTool(apiHandler)
+        tools["android.packages.list"] = GetPackagesTool(apiHandler)
+        tools["android.launch_app"] = LaunchAppTool(apiHandler)
+        tools["android.text.input"] = InputTextTool(apiHandler)
+        tools["android.input.clear"] = ClearTextTool(apiHandler)
+        tools["android.key.send"] = PressKeyTool(apiHandler)
+        tools["android.tap"] = TapTool(apiHandler)
+        tools["android.double_tap"] = DoubleTapTool(apiHandler)
+        tools["android.long_press"] = LongPressTool(apiHandler)
+        tools["android.swipe"] = SwipeTool(apiHandler)
         
-        // ADB tools (需要安装ADB工具)
-        if (AdbHelper.isAdbAvailable()) {
-            tools["adb_device_info"] = AdbDeviceInfoTool()
-            Log.i(TAG, "ADB is available, registered ADB tools")
-        } else {
-            Log.w(TAG, "ADB not available, skipping ADB tools")
-        }
+        // ADB tools (直接注册,不检测)
+        tools["adb_device_info"] = AdbDeviceInfoTool()
         
         Log.i(TAG, "Registered ${tools.size} tools")
     }
@@ -320,22 +315,18 @@ class ReverseConnectionService : Service() {
         // Map of tool names to their definitions
         val toolDefinitions = mutableMapOf(
             "calculator" to CalculatorTool.getToolDefinition(),
-            "get_state" to GetStateTool.getToolDefinition(),
-            "get_packages" to GetPackagesTool.getToolDefinition(),
-            "launch_app" to LaunchAppTool.getToolDefinition(),
-            "input_text" to InputTextTool.getToolDefinition(),
-            "clear_text" to ClearTextTool.getToolDefinition(),
-            "press_key" to PressKeyTool.getToolDefinition(),
-            "tap" to TapTool.getToolDefinition(),
-            "double_tap" to DoubleTapTool.getToolDefinition(),
-            "long_press" to LongPressTool.getToolDefinition(),
-            "swipe" to SwipeTool.getToolDefinition()
+            "android.screen.dump" to GetStateTool.getToolDefinition(),
+            "android.packages.list" to GetPackagesTool.getToolDefinition(),
+            "android.launch_app" to LaunchAppTool.getToolDefinition(),
+            "android.text.input" to InputTextTool.getToolDefinition(),
+            "android.input.clear" to ClearTextTool.getToolDefinition(),
+            "android.key.send" to PressKeyTool.getToolDefinition(),
+            "android.tap" to TapTool.getToolDefinition(),
+            "android.double_tap" to DoubleTapTool.getToolDefinition(),
+            "android.long_press" to LongPressTool.getToolDefinition(),
+            "android.swipe" to SwipeTool.getToolDefinition(),
+            "adb_device_info" to AdbDeviceInfoTool.getToolDefinition()
         )
-        
-        // Add ADB tools if available
-        if (AdbHelper.isAdbAvailable()) {
-            toolDefinitions["adb_device_info"] = AdbDeviceInfoTool.getToolDefinition()
-        }
         
         // Add only enabled tools to the list
         enabledTools.forEach { toolName ->

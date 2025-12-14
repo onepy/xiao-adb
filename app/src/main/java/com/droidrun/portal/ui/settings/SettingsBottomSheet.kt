@@ -166,9 +166,6 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         val toolsContainer = root.findViewById<LinearLayout>(R.id.mcp_tools_container)
         toolsContainer.removeAllViews()
         
-        // 检查ADB是否可用
-        val adbAvailable = AdbHelper.isAdbAvailable()
-        
         // Get all available accessibility tools
         val accessibilityTools = listOf(
             ToolInfo(
@@ -178,63 +175,63 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
                 toolDefinition = CalculatorTool.getToolDefinition()
             ),
             ToolInfo(
-                name = "get_state",
-                displayName = "Get State",
-                description = "Get current phone state and accessibility tree",
+                name = "android.screen.dump",
+                displayName = "Screen Dump",
+                description = "获取当前屏幕交互内容",
                 toolDefinition = com.droidrun.portal.mcp.tools.GetStateTool.getToolDefinition()
             ),
             ToolInfo(
-                name = "get_packages",
-                displayName = "Get Packages",
-                description = "List installed applications",
+                name = "android.packages.list",
+                displayName = "Packages List",
+                description = "获取已安装应用列表",
                 toolDefinition = com.droidrun.portal.mcp.tools.GetPackagesTool.getToolDefinition()
             ),
             ToolInfo(
-                name = "launch_app",
+                name = "android.launch_app",
                 displayName = "Launch App",
-                description = "Start an application by package name",
+                description = "启动指定应用",
                 toolDefinition = com.droidrun.portal.mcp.tools.LaunchAppTool.getToolDefinition()
             ),
             ToolInfo(
-                name = "input_text",
-                displayName = "Input Text",
-                description = "Type text into focused field",
+                name = "android.text.input",
+                displayName = "Text Input",
+                description = "输入文本",
                 toolDefinition = com.droidrun.portal.mcp.tools.InputTextTool.getToolDefinition()
             ),
             ToolInfo(
-                name = "clear_text",
+                name = "android.input.clear",
                 displayName = "Clear Text",
-                description = "Clear text from focused field",
+                description = "清除文本",
                 toolDefinition = com.droidrun.portal.mcp.tools.ClearTextTool.getToolDefinition()
             ),
             ToolInfo(
-                name = "press_key",
-                displayName = "Press Key",
-                description = "Simulate key press (ENTER, BACK, etc)",
+                name = "android.key.send",
+                displayName = "Send Key",
+                description = "发送按键",
                 toolDefinition = com.droidrun.portal.mcp.tools.PressKeyTool.getToolDefinition()
             ),
             ToolInfo(
-                name = "tap",
+                name = "android.tap",
                 displayName = "Tap",
-                description = "Single tap at coordinates",
+                description = "点击屏幕",
                 toolDefinition = com.droidrun.portal.mcp.tools.TapTool.getToolDefinition()
             ),
             ToolInfo(
-                name = "double_tap",
+                name = "android.double_tap",
                 displayName = "Double Tap",
-                description = "Double tap at coordinates",
+                description = "双击屏幕",
                 toolDefinition = com.droidrun.portal.mcp.tools.DoubleTapTool.getToolDefinition()
             ),
             ToolInfo(
-                name = "long_press",
+                name = "android.long_press",
                 displayName = "Long Press",
-                description = "Long press at coordinates",
+                description = "长按屏幕",
                 toolDefinition = com.droidrun.portal.mcp.tools.LongPressTool.getToolDefinition()
             ),
             ToolInfo(
-                name = "swipe",
+                name = "android.swipe",
                 displayName = "Swipe",
-                description = "Swipe gesture between two points",
+                description = "滑动屏幕",
                 toolDefinition = com.droidrun.portal.mcp.tools.SwipeTool.getToolDefinition()
             )
         )
@@ -276,66 +273,53 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         val adbSection = root.findViewById<LinearLayout>(R.id.adb_tools_section)
         adbSection.removeAllViews()
         
-        // 检查ADB是否可用
-        val adbAvailable = AdbHelper.isAdbAvailable()
-        
-        // Add ADB tools section if available
-        if (adbAvailable) {
-            val adbTools = listOf(
-                ToolInfo(
-                    name = "adb_device_info",
-                    displayName = "ADB Device Info",
-                    description = "Query battery, volume via ADB",
-                    toolDefinition = AdbDeviceInfoTool.getToolDefinition()
-                )
+        // 直接显示ADB工具,不进行检测
+        val adbTools = listOf(
+            ToolInfo(
+                name = "adb_device_info",
+                displayName = "ADB Device Info",
+                description = "Query battery, volume via ADB",
+                toolDefinition = AdbDeviceInfoTool.getToolDefinition()
             )
+        )
+        
+        val adbSectionHeader = TextView(requireContext()).apply {
+            text = "ADB工具 (${adbTools.size})"
+            textSize = 12f
+            setTextColor(resources.getColor(android.R.color.darker_gray, null))
+            setPadding(24.dpToPx(), 8.dpToPx(), 24.dpToPx(), 8.dpToPx())
+        }
+        adbSection.addView(adbSectionHeader)
+        
+        adbTools.forEach { toolInfo ->
+            val toolView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.item_mcp_tool, adbSection, false)
             
-            val adbSectionHeader = TextView(requireContext()).apply {
-                text = "ADB工具 (${adbTools.size}) ✓ ADB已安装"
-                textSize = 12f
-                setTextColor(resources.getColor(android.R.color.holo_green_dark, null))
-                setPadding(24.dpToPx(), 8.dpToPx(), 24.dpToPx(), 8.dpToPx())
-            }
-            adbSection.addView(adbSectionHeader)
+            val toolName = toolView.findViewById<TextView>(R.id.tool_name)
+            val toolDescription = toolView.findViewById<TextView>(R.id.tool_description)
+            val toolSwitch = toolView.findViewById<SwitchMaterial>(R.id.tool_switch)
             
-            adbTools.forEach { toolInfo ->
-                val toolView = LayoutInflater.from(requireContext())
-                    .inflate(R.layout.item_mcp_tool, adbSection, false)
+            toolName.text = toolInfo.displayName
+            toolDescription.text = toolInfo.description
+            toolSwitch.isChecked = configManager.isMcpToolEnabled(toolInfo.name)
+            
+            toolSwitch.setOnCheckedChangeListener { _, isChecked ->
+                configManager.setMcpToolEnabled(toolInfo.name, isChecked)
                 
-                val toolName = toolView.findViewById<TextView>(R.id.tool_name)
-                val toolDescription = toolView.findViewById<TextView>(R.id.tool_description)
-                val toolSwitch = toolView.findViewById<SwitchMaterial>(R.id.tool_switch)
-                
-                toolName.text = toolInfo.displayName
-                toolDescription.text = toolInfo.description
-                toolSwitch.isChecked = configManager.isMcpToolEnabled(toolInfo.name)
-                
-                toolSwitch.setOnCheckedChangeListener { _, isChecked ->
-                    configManager.setMcpToolEnabled(toolInfo.name, isChecked)
-                    
-                    // If reverse connection is active, restart service to update tools
-                    if (configManager.reverseConnectionEnabled) {
-                        val intent = Intent(requireContext(), ReverseConnectionService::class.java)
-                        requireContext().stopService(intent)
-                        requireContext().startService(intent)
-                        Toast.makeText(
-                            requireContext(),
-                            if (isChecked) "已启用 ${toolInfo.displayName}" else "已禁用 ${toolInfo.displayName}",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                // If reverse connection is active, restart service to update tools
+                if (configManager.reverseConnectionEnabled) {
+                    val intent = Intent(requireContext(), ReverseConnectionService::class.java)
+                    requireContext().stopService(intent)
+                    requireContext().startService(intent)
+                    Toast.makeText(
+                        requireContext(),
+                        if (isChecked) "已启用 ${toolInfo.displayName}" else "已禁用 ${toolInfo.displayName}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
-                
-                adbSection.addView(toolView)
             }
-        } else {
-            val adbWarning = TextView(requireContext()).apply {
-                text = "ADB工具 (0) ✗ 未检测到ADB\n提示: 在Termux中运行 'pkg install android-tools' 安装"
-                textSize = 12f
-                setTextColor(resources.getColor(android.R.color.holo_orange_dark, null))
-                setPadding(24.dpToPx(), 8.dpToPx(), 24.dpToPx(), 8.dpToPx())
-            }
-            adbSection.addView(adbWarning)
+            
+            adbSection.addView(toolView)
         }
     }
     
