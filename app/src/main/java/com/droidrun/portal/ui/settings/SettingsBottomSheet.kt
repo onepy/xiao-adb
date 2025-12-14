@@ -17,9 +17,7 @@ import com.droidrun.portal.R
 import com.droidrun.portal.config.ConfigManager
 import com.droidrun.portal.events.model.EventType
 import com.droidrun.portal.mcp.tools.CalculatorTool
-import com.droidrun.portal.mcp.tools.AdbDeviceInfoTool
 import com.droidrun.portal.service.ReverseConnectionService
-import com.droidrun.portal.utils.AdbHelper
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
@@ -157,9 +155,6 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         
         // Setup MCP Tools List
         setupMcpToolsList(view)
-        
-        // Setup ADB Tools List (separate section)
-        setupAdbToolsList(view)
     }
     
     private fun setupMcpToolsList(root: View) {
@@ -266,60 +261,6 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
             }
             
             toolsContainer.addView(toolView)
-        }
-    }
-    
-    private fun setupAdbToolsList(root: View) {
-        val adbSection = root.findViewById<LinearLayout>(R.id.adb_tools_section)
-        adbSection.removeAllViews()
-        
-        // 直接显示ADB工具,不进行检测
-        val adbTools = listOf(
-            ToolInfo(
-                name = "adb_device_info",
-                displayName = "ADB Device Info",
-                description = "Query battery, volume via ADB",
-                toolDefinition = AdbDeviceInfoTool.getToolDefinition()
-            )
-        )
-        
-        val adbSectionHeader = TextView(requireContext()).apply {
-            text = "ADB工具 (${adbTools.size})"
-            textSize = 12f
-            setTextColor(resources.getColor(android.R.color.darker_gray, null))
-            setPadding(24.dpToPx(), 8.dpToPx(), 24.dpToPx(), 8.dpToPx())
-        }
-        adbSection.addView(adbSectionHeader)
-        
-        adbTools.forEach { toolInfo ->
-            val toolView = LayoutInflater.from(requireContext())
-                .inflate(R.layout.item_mcp_tool, adbSection, false)
-            
-            val toolName = toolView.findViewById<TextView>(R.id.tool_name)
-            val toolDescription = toolView.findViewById<TextView>(R.id.tool_description)
-            val toolSwitch = toolView.findViewById<SwitchMaterial>(R.id.tool_switch)
-            
-            toolName.text = toolInfo.displayName
-            toolDescription.text = toolInfo.description
-            toolSwitch.isChecked = configManager.isMcpToolEnabled(toolInfo.name)
-            
-            toolSwitch.setOnCheckedChangeListener { _, isChecked ->
-                configManager.setMcpToolEnabled(toolInfo.name, isChecked)
-                
-                // If reverse connection is active, restart service to update tools
-                if (configManager.reverseConnectionEnabled) {
-                    val intent = Intent(requireContext(), ReverseConnectionService::class.java)
-                    requireContext().stopService(intent)
-                    requireContext().startService(intent)
-                    Toast.makeText(
-                        requireContext(),
-                        if (isChecked) "已启用 ${toolInfo.displayName}" else "已禁用 ${toolInfo.displayName}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-            
-            adbSection.addView(toolView)
         }
     }
     

@@ -31,9 +31,17 @@ object A11yTreeCleaner {
             val screenSize = extractScreenSize(root)
             result.put("screen_size", screenSize)
             
-            // 3. 提取可交互元素列表
-            val elements = extractInteractiveElements(root)
-            result.put("elements", elements)
+            // 3. 提取可交互元素列表(字符串数组格式)
+            val elements = extractInteractiveElementsCompact(root)
+            
+            // 在数组第一行添加格式说明
+            val elementsWithHeader = JSONArray()
+            elementsWithHeader.put("FORMAT: text|x,y,w,h|id|type|flags (flags: c=clickable,l=long_clickable,e=editable,f=focused,s=selected,k=checked)")
+            for (i in 0 until elements.length()) {
+                elementsWithHeader.put(elements.getString(i))
+            }
+            
+            result.put("elements", elementsWithHeader)
             result.put("element_count", elements.length())
             
             val resultStr = result.toString()
@@ -84,63 +92,71 @@ object A11yTreeCleaner {
         return JSONObject()
     }
     
-    private fun extractInteractiveElements(root: JSONObject): JSONArray {
+    /**
+     * 提取可交互元素 - 紧凑字符串格式
+     * 格式: text|x,y,w,h|id|type|flags
+     * flags: c=clickable, l=long_clickable, e=editable, f=focused, s=selected, k=checked
+     */
+    private fun extractInteractiveElementsCompact(root: JSONObject): JSONArray {
         val result = JSONArray()
         val a11yTree = root.optJSONObject("a11y_tree")
         
         if (a11yTree != null) {
-            collectElements(a11yTree, result)
+            collectElementsCompact(a11yTree, result)
         }
         
         return result
     }
     
-    private fun collectElements(node: JSONObject, result: JSONArray) {
+    private fun collectElementsCompact(node: JSONObject, result: JSONArray) {
         if (result.length() >= MAX_ELEMENTS) return
         
         if (shouldKeepNode(node)) {
-            val element = JSONObject()
+            val parts = mutableListOf<String>()
             
-            // 文本
+            // 1. 文本 (可能为空)
             val text = node.optString("text", "")
             val contentDesc = node.optString("contentDescription", "")
-            if (text.isNotEmpty()) {
-                element.put("text", truncateText(text, MAX_TEXT_LENGTH))
-            } else if (contentDesc.isNotEmpty()) {
-                element.put("text", truncateText(contentDesc, MAX_TEXT_LENGTH))
+            val displayText = when {
+                text.isNotEmpty() -> truncateText(text, MAX_TEXT_LENGTH)
+                contentDesc.isNotEmpty() -> truncateText(contentDesc, MAX_TEXT_LENGTH)
+                else -> ""
             }
+            parts.add(displayText)
             
-            // 坐标
+            // 2. 坐标 x,y,w,h
             val boundsInScreen = node.optJSONObject("boundsInScreen")
             if (boundsInScreen != null) {
-                element.put("x", boundsInScreen.optInt("left", 0))
-                element.put("y", boundsInScreen.optInt("top", 0))
-                element.put("width", boundsInScreen.optInt("right", 0) - boundsInScreen.optInt("left", 0))
-                element.put("height", boundsInScreen.optInt("bottom", 0) - boundsInScreen.optInt("top", 0))
+                val x = boundsInScreen.optInt("left", 0)
+                val y = boundsInScreen.optInt("top", 0)
+                val w = boundsInScreen.optInt("right", 0) - x
+                val h = boundsInScreen.optInt("bottom", 0) - y
+                parts.add("$x,$y,$w,$h")
+            } else {
+                parts.add("")
             }
             
-            // resourceId
+            // 3. resourceId (去掉包名前缀)
             val resourceId = node.optString("resourceId", "")
-            if (resourceId.isNotEmpty()) {
-                element.put("id", resourceId.substringAfterLast('/'))
-            }
+            parts.add(if (resourceId.isNotEmpty()) resourceId.substringAfterLast('/') else "")
             
-            // 类型
+            // 4. 类型 (去掉包名前缀)
             val className = node.optString("className", "")
-            if (className.isNotEmpty()) {
-                element.put("type", className.substringAfterLast('.'))
+            parts.add(if (className.isNotEmpty()) className.substringAfterLast('.') else "")
+            
+            // 5. 标志位 (单字母编码)
+            val flags = buildString {
+                if (node.optBoolean("isClickable", false)) append('c')
+                if (node.optBoolean("isLongClickable", false)) append('l')
+                if (node.optBoolean("isEditable", false)) append('e')
+                if (node.optBoolean("isFocused", false)) append('f')
+                if (node.optBoolean("isSelected", false)) append('s')
+                if (node.optBoolean("isChecked", false)) append('k')
             }
+            parts.add(flags)
             
-            // 交互属性
-            if (node.optBoolean("isClickable", false)) element.put("clickable", true)
-            if (node.optBoolean("isLongClickable", false)) element.put("long_clickable", true)
-            if (node.optBoolean("isCheckable", false)) element.put("checkable", true)
-            if (node.optBoolean("isChecked", false)) element.put("checked", true)
-            if (node.optBoolean("isEditable", false)) element.put("editable", true)
-            if (node.optBoolean("isSelected", false)) element.put("selected", true)
-            if (node.optBoolean("isFocused", false)) element.put("focused", true)
-            
-            result.put(element)
+            // 用 | 分隔各部分
+            result.put(parts.joinToString("|"))
         }
         
         // 递归子节点
@@ -148,7 +164,7 @@ object A11yTreeCleaner {
         if (children != null) {
             for (i in 0 until children.length()) {
                 if (result.length() >= MAX_ELEMENTS) break
-                collectElements(children.getJSONObject(i), result)
+                collectElementsCompact(children.getJSONObject(i), result)
             }
         }
     }

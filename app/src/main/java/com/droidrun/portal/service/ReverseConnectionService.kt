@@ -19,7 +19,6 @@ import com.droidrun.portal.core.StateRepository
 import com.droidrun.portal.input.DroidrunKeyboardIME
 import com.droidrun.portal.mcp.*
 import com.droidrun.portal.mcp.tools.*
-import com.droidrun.portal.utils.AdbHelper
 import okhttp3.*
 import okio.ByteString
 import org.json.JSONArray
@@ -130,9 +129,6 @@ class ReverseConnectionService : Service() {
         tools["android.double_tap"] = DoubleTapTool(apiHandler)
         tools["android.long_press"] = LongPressTool(apiHandler)
         tools["android.swipe"] = SwipeTool(apiHandler)
-        
-        // ADB tools (直接注册,不检测)
-        tools["adb_device_info"] = AdbDeviceInfoTool()
         
         Log.i(TAG, "Registered ${tools.size} tools")
     }
@@ -324,8 +320,7 @@ class ReverseConnectionService : Service() {
             "android.tap" to TapTool.getToolDefinition(),
             "android.double_tap" to DoubleTapTool.getToolDefinition(),
             "android.long_press" to LongPressTool.getToolDefinition(),
-            "android.swipe" to SwipeTool.getToolDefinition(),
-            "adb_device_info" to AdbDeviceInfoTool.getToolDefinition()
+            "android.swipe" to SwipeTool.getToolDefinition()
         )
         
         // Add only enabled tools to the list
