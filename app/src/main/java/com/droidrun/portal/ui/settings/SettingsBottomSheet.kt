@@ -17,7 +17,9 @@ import com.droidrun.portal.R
 import com.droidrun.portal.config.ConfigManager
 import com.droidrun.portal.events.model.EventType
 import com.droidrun.portal.mcp.tools.CalculatorTool
+import com.droidrun.portal.mcp.tools.AdbDeviceInfoTool
 import com.droidrun.portal.service.ReverseConnectionService
+import com.droidrun.portal.utils.AdbHelper
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
@@ -161,8 +163,11 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         val toolsContainer = root.findViewById<LinearLayout>(R.id.mcp_tools_container)
         toolsContainer.removeAllViews()
         
-        // Get all available tools
-        val availableTools = listOf(
+        // 检查ADB是否可用
+        val adbAvailable = AdbHelper.isAdbAvailable()
+        
+        // Get all available accessibility tools
+        val accessibilityTools = listOf(
             ToolInfo(
                 name = "calculator",
                 displayName = "Calculator",
@@ -231,8 +236,31 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
             )
         )
         
-        // Add each tool to the container
-        availableTools.forEach { toolInfo ->
+        // ADB tools (conditionally added)
+        val adbTools = if (adbAvailable) {
+            listOf(
+                ToolInfo(
+                    name = "adb_device_info",
+                    displayName = "ADB Device Info",
+                    description = "Query battery, volume via ADB",
+                    toolDefinition = AdbDeviceInfoTool.getToolDefinition()
+                )
+            )
+        } else {
+            emptyList()
+        }
+        
+        // Add accessibility tools section header
+        val sectionHeader = TextView(requireContext()).apply {
+            text = "无障碍工具 (${accessibilityTools.size})"
+            textSize = 12f
+            setTextColor(resources.getColor(android.R.color.darker_gray, null))
+            setPadding(24.dpToPx(), 8.dpToPx(), 24.dpToPx(), 8.dpToPx())
+        }
+        toolsContainer.addView(sectionHeader)
+        
+        // Add each accessibility tool to the container
+        accessibilityTools.forEach { toolInfo ->
             val toolView = LayoutInflater.from(requireContext())
                 .inflate(R.layout.item_mcp_tool, toolsContainer, false)
             
@@ -262,6 +290,60 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
             
             toolsContainer.addView(toolView)
         }
+        
+        // Add ADB tools section if available
+        if (adbTools.isNotEmpty()) {
+            val adbSectionHeader = TextView(requireContext()).apply {
+                text = "ADB工具 (${adbTools.size}) ✓ ADB已安装"
+                textSize = 12f
+                setTextColor(resources.getColor(android.R.color.holo_green_dark, null))
+                setPadding(24.dpToPx(), 16.dpToPx(), 24.dpToPx(), 8.dpToPx())
+            }
+            toolsContainer.addView(adbSectionHeader)
+            
+            adbTools.forEach { toolInfo ->
+                val toolView = LayoutInflater.from(requireContext())
+                    .inflate(R.layout.item_mcp_tool, toolsContainer, false)
+                
+                val toolName = toolView.findViewById<TextView>(R.id.tool_name)
+                val toolDescription = toolView.findViewById<TextView>(R.id.tool_description)
+                val toolSwitch = toolView.findViewById<SwitchMaterial>(R.id.tool_switch)
+                
+                toolName.text = toolInfo.displayName
+                toolDescription.text = toolInfo.description
+                toolSwitch.isChecked = configManager.isMcpToolEnabled(toolInfo.name)
+                
+                toolSwitch.setOnCheckedChangeListener { _, isChecked ->
+                    configManager.setMcpToolEnabled(toolInfo.name, isChecked)
+                    
+                    // If reverse connection is active, restart service to update tools
+                    if (configManager.reverseConnectionEnabled) {
+                        val intent = Intent(requireContext(), ReverseConnectionService::class.java)
+                        requireContext().stopService(intent)
+                        requireContext().startService(intent)
+                        Toast.makeText(
+                            requireContext(),
+                            if (isChecked) "已启用 ${toolInfo.displayName}" else "已禁用 ${toolInfo.displayName}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+                
+                toolsContainer.addView(toolView)
+            }
+        } else {
+            val adbWarning = TextView(requireContext()).apply {
+                text = "ADB工具 (0) ✗ 未检测到ADB\n提示: 在Termux中运行 'pkg install android-tools' 安装"
+                textSize = 12f
+                setTextColor(resources.getColor(android.R.color.holo_orange_dark, null))
+                setPadding(24.dpToPx(), 16.dpToPx(), 24.dpToPx(), 8.dpToPx())
+            }
+            toolsContainer.addView(adbWarning)
+        }
+    }
+    
+    private fun Int.dpToPx(): Int {
+        return (this * resources.displayMetrics.density).toInt()
     }
     
     private data class ToolInfo(

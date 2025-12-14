@@ -19,6 +19,7 @@ import com.droidrun.portal.core.StateRepository
 import com.droidrun.portal.input.DroidrunKeyboardIME
 import com.droidrun.portal.mcp.*
 import com.droidrun.portal.mcp.tools.*
+import com.droidrun.portal.utils.AdbHelper
 import okhttp3.*
 import okio.ByteString
 import org.json.JSONArray
@@ -118,7 +119,7 @@ class ReverseConnectionService : Service() {
         // Math tool
         tools["calculator"] = CalculatorTool()
         
-        // Android operation tools
+        // Android operation tools (无障碍服务)
         tools["get_state"] = GetStateTool(apiHandler)
         tools["get_packages"] = GetPackagesTool(apiHandler)
         tools["launch_app"] = LaunchAppTool(apiHandler)
@@ -129,6 +130,14 @@ class ReverseConnectionService : Service() {
         tools["double_tap"] = DoubleTapTool(apiHandler)
         tools["long_press"] = LongPressTool(apiHandler)
         tools["swipe"] = SwipeTool(apiHandler)
+        
+        // ADB tools (需要安装ADB工具)
+        if (AdbHelper.isAdbAvailable()) {
+            tools["adb_device_info"] = AdbDeviceInfoTool()
+            Log.i(TAG, "ADB is available, registered ADB tools")
+        } else {
+            Log.w(TAG, "ADB not available, skipping ADB tools")
+        }
         
         Log.i(TAG, "Registered ${tools.size} tools")
     }
@@ -309,7 +318,7 @@ class ReverseConnectionService : Service() {
         val enabledTools = configManager.getMcpToolsEnabled()
         
         // Map of tool names to their definitions
-        val toolDefinitions = mapOf(
+        val toolDefinitions = mutableMapOf(
             "calculator" to CalculatorTool.getToolDefinition(),
             "get_state" to GetStateTool.getToolDefinition(),
             "get_packages" to GetPackagesTool.getToolDefinition(),
@@ -322,6 +331,11 @@ class ReverseConnectionService : Service() {
             "long_press" to LongPressTool.getToolDefinition(),
             "swipe" to SwipeTool.getToolDefinition()
         )
+        
+        // Add ADB tools if available
+        if (AdbHelper.isAdbAvailable()) {
+            toolDefinitions["adb_device_info"] = AdbDeviceInfoTool.getToolDefinition()
+        }
         
         // Add only enabled tools to the list
         enabledTools.forEach { toolName ->
