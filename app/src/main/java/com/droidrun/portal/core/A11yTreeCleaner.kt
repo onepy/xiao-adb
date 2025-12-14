@@ -21,181 +21,146 @@ object A11yTreeCleaner {
     fun cleanA11yTree(rawJson: String): String {
         return try {
             val root = JSONObject(rawJson)
-            val result = StringBuilder()
+            val result = JSONObject()
             
-            // 1. 精简 phone_state
-            appendPhoneState(root, result)
+            // 1. 提取phone_state (精简)
+            val phoneState = extractPhoneState(root)
+            result.put("phone_state", phoneState)
             
-            // 2. 提取屏幕宽高
-            appendScreenSize(root, result)
+            // 2. 提取screen_size
+            val screenSize = extractScreenSize(root)
+            result.put("screen_size", screenSize)
             
-            // 3. 提取可交互元素
-            val elementCount = appendInteractiveElements(root, result)
+            // 3. 提取可交互元素列表
+            val elements = extractInteractiveElements(root)
+            result.put("elements", elements)
+            result.put("element_count", elements.length())
             
-            Log.i(TAG, "A11y tree cleaned: ${rawJson.length} -> ${result.length} bytes, $elementCount elements")
+            val resultStr = result.toString()
+            Log.i(TAG, "A11y tree cleaned: ${rawJson.length} -> ${resultStr.length} bytes, ${elements.length()} elements")
             
-            result.toString()
+            resultStr
         } catch (e: Exception) {
             Log.e(TAG, "Error cleaning A11y tree", e)
-            "清理失败: ${e.message}"
+            JSONObject().apply {
+                put("error", e.message ?: "Unknown error")
+            }.toString()
         }
     }
     
-    private fun appendPhoneState(inner: JSONObject, result: StringBuilder) {
-        val phoneState = inner.optJSONObject("phone_state") ?: return
+    private fun extractPhoneState(root: JSONObject): JSONObject {
+        val phoneState = root.optJSONObject("phone_state") ?: return JSONObject()
         
-        result.append("【手机状态】\n")
-        
-        phoneState.optString("currentApp")?.let {
-            if (it.isNotEmpty()) result.append("APP: $it\n")
-        }
-        
-        phoneState.optString("packageName")?.let {
-            if (it.isNotEmpty()) result.append("包名: $it\n")
-        }
-        
-        phoneState.optString("activityName")?.let {
-            if (it.isNotEmpty()) result.append("页面: $it\n")
-        }
-        
-        result.append("键盘: ${if (phoneState.optBoolean("keyboardVisible")) "显示" else "隐藏"}\n")
-        result.append("可编辑: ${if (phoneState.optBoolean("isEditable")) "是" else "否"}\n")
-        
-        // 焦点元素
-        val focused = phoneState.optJSONObject("focusedElement")
-        if (focused != null) {
-            val text = focused.optString("text", "")
-            val id = focused.optString("resourceId", "")
-            if (text.isNotEmpty() || id.isNotEmpty()) {
-                result.append("焦点: ")
-                if (text.isNotEmpty()) result.append(text)
-                if (id.isNotEmpty()) {
-                    val shortId = id.substringAfterLast('/')
-                    result.append(" #$shortId")
-                }
-                result.append("\n")
+        return JSONObject().apply {
+            put("app", phoneState.optString("currentApp", ""))
+            put("package", phoneState.optString("packageName", ""))
+            put("activity", phoneState.optString("activityName", ""))
+            put("keyboard_visible", phoneState.optBoolean("keyboardVisible", false))
+            put("is_editable", phoneState.optBoolean("isEditable", false))
+            
+            val focused = phoneState.optJSONObject("focusedElement")
+            if (focused != null) {
+                val focusInfo = JSONObject()
+                val className = focused.optString("className", "")
+                val resourceId = focused.optString("resourceId", "")
+                if (className.isNotEmpty()) focusInfo.put("class", className)
+                if (resourceId.isNotEmpty()) focusInfo.put("id", resourceId.substringAfterLast('/'))
+                if (focusInfo.length() > 0) put("focused", focusInfo)
             }
         }
     }
     
-    private fun appendScreenSize(inner: JSONObject, result: StringBuilder) {
-        val a11yTree = inner.optJSONArray("a11y_tree")
-        if (a11yTree != null && a11yTree.length() > 0) {
-            val firstNode = a11yTree.getJSONObject(0)
-            val bounds = firstNode.optString("bounds", "")
-            if (bounds.isNotEmpty()) {
-                try {
-                    val parts = bounds.split(",")
-                    if (parts.size == 4) {
-                        val x1 = parts[0].toInt()
-                        val y1 = parts[1].toInt()
-                        val x2 = parts[2].toInt()
-                        val y2 = parts[3].toInt()
-                        val width = x2 - x1
-                        val height = y2 - y1
-                        result.append("屏幕: ${width}x${height}\n\n")
-                    }
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to parse bounds: $bounds")
+    private fun extractScreenSize(root: JSONObject): JSONObject {
+        val deviceContext = root.optJSONObject("device_context")
+        if (deviceContext != null) {
+            val screenBounds = deviceContext.optJSONObject("screen_bounds")
+            if (screenBounds != null) {
+                return JSONObject().apply {
+                    put("width", screenBounds.optInt("width", 0))
+                    put("height", screenBounds.optInt("height", 0))
                 }
             }
         }
+        return JSONObject()
     }
     
-    private fun appendInteractiveElements(inner: JSONObject, result: StringBuilder): Int {
-        result.append("【可交互元素】\n")
-        var count = 0
+    private fun extractInteractiveElements(root: JSONObject): JSONArray {
+        val result = JSONArray()
+        val a11yTree = root.optJSONObject("a11y_tree")
         
-        val a11yTree = inner.optJSONArray("a11y_tree")
         if (a11yTree != null) {
-            for (i in 0 until a11yTree.length()) {
-                if (count >= MAX_ELEMENTS) break
-                extractFlatElements(a11yTree.getJSONObject(i), result, count) { newCount ->
-                    count = newCount
-                }
-            }
+            collectElements(a11yTree, result)
         }
         
-        if (count == 0) {
-            result.append("（无可交互元素）\n")
-        } else {
-            result.append("共 $count 个元素\n")
-        }
-        
-        return count
+        return result
     }
     
-    private fun extractFlatElements(
-        node: JSONObject,
-        result: StringBuilder,
-        count: Int,
-        updateCount: (Int) -> Unit
-    ) {
-        var currentCount = count
-        if (currentCount >= MAX_ELEMENTS) return
+    private fun collectElements(node: JSONObject, result: JSONArray) {
+        if (result.length() >= MAX_ELEMENTS) return
         
         if (shouldKeepNode(node)) {
-            currentCount++
-            updateCount(currentCount)
-            
-            val text = node.optString("text", "")
-            val bounds = node.optString("bounds", "")
-            val resourceId = node.optString("resourceId", "")
-            val className = node.optString("className", "")
-            val clickable = node.optBoolean("clickable", false)
-            val contentDesc = node.optString("contentDesc", "")
-            
-            result.append("$currentCount. ")
-            
-            // 类型
-            if (className.isNotEmpty()) {
-                val shortClass = className.substringAfterLast('.')
-                result.append("[$shortClass] ")
-            }
+            val element = JSONObject()
             
             // 文本
+            val text = node.optString("text", "")
+            val contentDesc = node.optString("contentDescription", "")
             if (text.isNotEmpty()) {
-                result.append(truncateText(text, MAX_TEXT_LENGTH))
+                element.put("text", truncateText(text, MAX_TEXT_LENGTH))
             } else if (contentDesc.isNotEmpty()) {
-                result.append(truncateText(contentDesc, MAX_TEXT_LENGTH))
+                element.put("text", truncateText(contentDesc, MAX_TEXT_LENGTH))
             }
             
             // 坐标
-            if (bounds.isNotEmpty()) {
-                result.append(" @$bounds")
+            val boundsInScreen = node.optJSONObject("boundsInScreen")
+            if (boundsInScreen != null) {
+                element.put("x", boundsInScreen.optInt("left", 0))
+                element.put("y", boundsInScreen.optInt("top", 0))
+                element.put("width", boundsInScreen.optInt("right", 0) - boundsInScreen.optInt("left", 0))
+                element.put("height", boundsInScreen.optInt("bottom", 0) - boundsInScreen.optInt("top", 0))
             }
             
             // resourceId
+            val resourceId = node.optString("resourceId", "")
             if (resourceId.isNotEmpty()) {
-                val shortId = resourceId.substringAfterLast('/')
-                result.append(" #$shortId")
+                element.put("id", resourceId.substringAfterLast('/'))
+            }
+            
+            // 类型
+            val className = node.optString("className", "")
+            if (className.isNotEmpty()) {
+                element.put("type", className.substringAfterLast('.'))
             }
             
             // 交互属性
-            if (clickable) {
-                result.append(" 可点击")
-            }
+            if (node.optBoolean("isClickable", false)) element.put("clickable", true)
+            if (node.optBoolean("isLongClickable", false)) element.put("long_clickable", true)
+            if (node.optBoolean("isCheckable", false)) element.put("checkable", true)
+            if (node.optBoolean("isChecked", false)) element.put("checked", true)
+            if (node.optBoolean("isEditable", false)) element.put("editable", true)
+            if (node.optBoolean("isSelected", false)) element.put("selected", true)
+            if (node.optBoolean("isFocused", false)) element.put("focused", true)
             
-            result.append("\n")
+            result.put(element)
         }
         
         // 递归子节点
         val children = node.optJSONArray("children")
         if (children != null) {
             for (i in 0 until children.length()) {
-                if (currentCount >= MAX_ELEMENTS) break
-                extractFlatElements(children.getJSONObject(i), result, currentCount, updateCount)
+                if (result.length() >= MAX_ELEMENTS) break
+                collectElements(children.getJSONObject(i), result)
             }
         }
     }
     
     private fun shouldKeepNode(node: JSONObject): Boolean {
         val text = node.optString("text", "")
-        val contentDesc = node.optString("contentDesc", "")
+        val contentDesc = node.optString("contentDescription", "")
         val resourceId = node.optString("resourceId", "")
-        val clickable = node.optBoolean("clickable", false)
-        val focusable = node.optBoolean("focusable", false)
-        val checkable = node.optBoolean("checkable", false)
+        val clickable = node.optBoolean("isClickable", false)
+        val focusable = node.optBoolean("isFocusable", false)
+        val checkable = node.optBoolean("isCheckable", false)
+        val editable = node.optBoolean("isEditable", false)
         
         // 有意义文本
         if (isMeaningfulText(text)) return true
@@ -207,7 +172,7 @@ object A11yTreeCleaner {
         if (resourceId.isNotEmpty()) return true
         
         // 可交互
-        if (clickable || focusable || checkable) return true
+        if (clickable || focusable || checkable || editable) return true
         
         return false
     }

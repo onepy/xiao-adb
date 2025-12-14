@@ -48,12 +48,12 @@ class GetStateTool(private val apiHandler: ApiHandler) : McpToolHandler {
             
             when (val response = apiHandler.getStateFull(filter)) {
                 is ApiResponse.Success -> {
-                    // 临时禁用数据精简,返回完整JSON
-                    // val cleanedData = A11yTreeCleaner.cleanA11yTree(response.data as String)
+                    // 启用数据精简,返回结构化JSON
+                    val cleanedData = A11yTreeCleaner.cleanA11yTree(response.data as String)
                     
                     JSONObject().apply {
                         put("success", true)
-                        put("data", response.data)
+                        put("data", JSONObject(cleanedData))
                     }
                 }
                 is ApiResponse.Error -> {
@@ -119,7 +119,7 @@ class GetPackagesTool(private val apiHandler: ApiHandler) : McpToolHandler {
                 is ApiResponse.Raw -> {
                     val packages = response.json.getJSONArray("packages")
                     
-                    // Filter based on type and create simplified packages
+                    // Filter based on type and create simplified package strings
                     val filteredPackages = org.json.JSONArray()
                     for (i in 0 until packages.length()) {
                         val pkg = packages.getJSONObject(i)
@@ -133,13 +133,11 @@ class GetPackagesTool(private val apiHandler: ApiHandler) : McpToolHandler {
                         }
                         
                         if (shouldInclude) {
-                            // Create simplified package info (only packageName, label, isSystemApp)
-                            val simplifiedPkg = JSONObject().apply {
-                                put("packageName", pkg.getString("packageName"))
-                                put("label", pkg.getString("label"))
-                                put("isSystemApp", isSystem)
-                            }
-                            filteredPackages.put(simplifiedPkg as Any)
+                            // Create simplified format: "packageName|label"
+                            val packageName = pkg.getString("packageName")
+                            val label = pkg.getString("label")
+                            val simplifiedFormat = "$packageName|$label"
+                            filteredPackages.put(simplifiedFormat)
                         }
                     }
                     
