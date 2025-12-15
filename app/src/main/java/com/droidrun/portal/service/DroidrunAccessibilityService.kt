@@ -781,7 +781,9 @@ class DroidrunAccessibilityService : AccessibilityService(), ConfigManager.Confi
                             }
                             
                             val byteArrayOutputStream = ByteArrayOutputStream()
-                            val compressionSuccess = bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
+                            // Use JPEG with 70% quality for better compression (typically 200-500KB)
+                            // For AI vision services, 70% quality is sufficient while reducing size by 80-90%
+                            val compressionSuccess = bitmap.compress(Bitmap.CompressFormat.JPEG, 70, byteArrayOutputStream)
                             
                             if (!compressionSuccess) {
                                 Log.e(TAG, "Failed to compress bitmap to PNG")
