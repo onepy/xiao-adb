@@ -149,6 +149,22 @@ class ApiHandler(
     }
     
     fun keyboardKey(keyCode: Int): ApiResponse {
+        // Map KeyEvent codes to AccessibilityService global actions
+        val globalAction = when (keyCode) {
+            3 -> android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME
+            4 -> android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK
+            26 -> android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_POWER_DIALOG
+            82 -> android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS
+            187 -> android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_RECENTS
+            else -> null
+        }
+        
+        // If it's a system key that maps to a global action, use performGlobalAction
+        if (globalAction != null) {
+            return performGlobalAction(globalAction)
+        }
+        
+        // Otherwise, try to send via IME for text input keys
         val ime = getKeyboardIME() ?: return ApiResponse.Error("DroidrunKeyboardIME not active or available")
         
         if (!ime.hasInputConnection()) {

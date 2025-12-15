@@ -729,7 +729,25 @@ class DroidrunAccessibilityService : AccessibilityService(), ConfigManager.Confi
 
         // Check if screenshot API is available (API 34+)
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            future.complete("error: Screenshot API requires Android 14 (API 34) or higher")
+            // For API < 34, provide alternative method using shell command
+            try {
+                // Use runtime exec to capture screenshot via screencap
+                val process = Runtime.getRuntime().exec(arrayOf("screencap", "-p"))
+                val inputStream = process.inputStream
+                val bytes = inputStream.readBytes()
+                inputStream.close()
+                process.waitFor()
+                
+                if (bytes.isNotEmpty()) {
+                    val base64String = Base64.encodeToString(bytes, Base64.NO_WRAP)
+                    future.complete(base64String)
+                } else {
+                    future.complete("error: Screenshot capture returned empty data. This device may require ADB permissions for screenshots. Please use: adb shell screencap -p /sdcard/screenshot.png")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error taking screenshot via screencap", e)
+                future.complete("error: Screenshot API requires Android 14 (API 34+) or ADB permissions. Your device is API ${android.os.Build.VERSION.SDK_INT}. Alternative: Use 'adb shell screencap -p /sdcard/screenshot.png' then 'adb pull /sdcard/screenshot.png'")
+            }
             return future
         }
 
