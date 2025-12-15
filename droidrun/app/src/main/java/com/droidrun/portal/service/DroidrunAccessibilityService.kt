@@ -2,7 +2,6 @@ package com.droidrun.portal.service
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
-import android.annotation.SuppressLint
 import android.graphics.Rect
 import android.util.Log
 import android.view.Display
@@ -29,7 +28,6 @@ import java.util.concurrent.CompletableFuture
 import com.droidrun.portal.events.EventHub
 import com.droidrun.portal.events.PortalWebSocketServer
 
-@SuppressLint("AccessibilityPolicy")
 class DroidrunAccessibilityService : AccessibilityService(), ConfigManager.ConfigChangeListener {
 
     companion object {
@@ -50,8 +48,6 @@ class DroidrunAccessibilityService : AccessibilityService(), ConfigManager.Confi
     private val mainHandler = Handler(Looper.getMainLooper())
     
     // Servers
-    // TODO Make nullable
-    private lateinit var actionDispatcher: ActionDispatcher
     private var socketServer: SocketServer? = null
     private var websocketServer: PortalWebSocketServer? = null
     
@@ -67,7 +63,6 @@ class DroidrunAccessibilityService : AccessibilityService(), ConfigManager.Confi
         super.onCreate()
         overlayManager = OverlayManager(this)
         val windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        // TODO increase SDK version to 30
         val windowMetrics = windowManager.currentWindowMetrics
         val bounds = windowMetrics.bounds
         screenBounds.set(0, 0, bounds.width(), bounds.height())
@@ -91,9 +86,7 @@ class DroidrunAccessibilityService : AccessibilityService(), ConfigManager.Confi
                  } catch (e: Exception) { "unknown" }
             }
         )
-        
-        actionDispatcher = ActionDispatcher(apiHandler)
-        socketServer = SocketServer(apiHandler, configManager, actionDispatcher)
+        socketServer = SocketServer(apiHandler)
         
         isInitialized = true
     }
@@ -159,7 +152,7 @@ class DroidrunAccessibilityService : AccessibilityService(), ConfigManager.Confi
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED,
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
             AccessibilityEvent.TYPE_VIEW_SCROLLED -> {
-                // Use a faster handling instead of clearing elements
+                overlayManager.clearElements()
             }
         }
     }
@@ -340,8 +333,6 @@ class DroidrunAccessibilityService : AccessibilityService(), ConfigManager.Confi
     fun getCurrentAppliedOffset(): Int = overlayManager.getPositionOffsetY()
 
     fun getScreenBounds(): Rect = screenBounds
-
-    fun getActionDispatcher(): ActionDispatcher = actionDispatcher
 
     fun setAutoOffsetEnabled(enabled: Boolean): Boolean {
         return try {
@@ -612,7 +603,7 @@ class DroidrunAccessibilityService : AccessibilityService(), ConfigManager.Confi
         try {
             if (websocketServer == null) {
                 val port = configManager.websocketPort
-                websocketServer = PortalWebSocketServer(port, actionDispatcher, configManager)
+                websocketServer = PortalWebSocketServer(port)
                 websocketServer?.start()
                 Log.i(TAG, "WebSocket server started on port $port")
             }
