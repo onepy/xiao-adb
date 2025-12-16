@@ -31,9 +31,19 @@ class ConfigManager private constructor(private val context: Context) {
         private const val KEY_NOTIFICATION_WHITELIST = "notification_whitelist"
         private const val KEY_MCP_TOOLS_ENABLED = "mcp_tools_enabled"
         
+        // WebSocket Heartbeat Configuration
+        private const val KEY_HEARTBEAT_INTERVAL = "heartbeat_interval"
+        private const val KEY_HEARTBEAT_TIMEOUT = "heartbeat_timeout"
+        private const val KEY_RECONNECT_INTERVAL = "reconnect_interval"
+        
         private const val DEFAULT_OFFSET = 0
         private const val DEFAULT_SOCKET_PORT = 8080
         private const val DEFAULT_WEBSOCKET_PORT = 8081
+        
+        // Default heartbeat settings (in milliseconds)
+        private const val DEFAULT_HEARTBEAT_INTERVAL = 30000L  // 30 seconds
+        private const val DEFAULT_HEARTBEAT_TIMEOUT = 10000L   // 10 seconds
+        private const val DEFAULT_RECONNECT_INTERVAL = 5000L   // 5 seconds
         
         @Volatile
         private var INSTANCE: ConfigManager? = null
@@ -145,6 +155,25 @@ class ConfigManager private constructor(private val context: Context) {
         get() = sharedPrefs.getBoolean(KEY_REVERSE_CONNECTION_ENABLED, false)
         set(value) {
             sharedPrefs.edit { putBoolean(KEY_REVERSE_CONNECTION_ENABLED, value) }
+        }
+    
+    // WebSocket Heartbeat Configuration
+    var heartbeatInterval: Long
+        get() = sharedPrefs.getLong(KEY_HEARTBEAT_INTERVAL, DEFAULT_HEARTBEAT_INTERVAL)
+        set(value) {
+            sharedPrefs.edit { putLong(KEY_HEARTBEAT_INTERVAL, value) }
+        }
+    
+    var heartbeatTimeout: Long
+        get() = sharedPrefs.getLong(KEY_HEARTBEAT_TIMEOUT, DEFAULT_HEARTBEAT_TIMEOUT)
+        set(value) {
+            sharedPrefs.edit { putLong(KEY_HEARTBEAT_TIMEOUT, value) }
+        }
+    
+    var reconnectInterval: Long
+        get() = sharedPrefs.getLong(KEY_RECONNECT_INTERVAL, DEFAULT_RECONNECT_INTERVAL)
+        set(value) {
+            sharedPrefs.edit { putLong(KEY_RECONNECT_INTERVAL, value) }
         }
 
     // Dynamic Event Toggles

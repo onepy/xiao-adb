@@ -53,10 +53,7 @@ class ReverseConnectionService : Service() {
     private lateinit var configManager: ConfigManager
     private lateinit var apiHandler: ApiHandler
     private var webSocket: WebSocket? = null
-    private val client = OkHttpClient.Builder()
-        .pingInterval(30, TimeUnit.SECONDS)
-        .readTimeout(0, TimeUnit.MILLISECONDS)
-        .build()
+    private lateinit var client: OkHttpClient
     
     private val mainHandler = Handler(Looper.getMainLooper())
     private var reconnectAttempt = 0
@@ -82,6 +79,12 @@ class ReverseConnectionService : Service() {
     override fun onCreate() {
         super.onCreate()
         configManager = ConfigManager.getInstance(this)
+        
+        // Initialize OkHttpClient with configurable heartbeat settings
+        client = OkHttpClient.Builder()
+            .pingInterval(configManager.heartbeatInterval, TimeUnit.MILLISECONDS)
+            .readTimeout(configManager.heartbeatTimeout, TimeUnit.MILLISECONDS)
+            .build()
         
         // Initialize ApiHandler
         val service = DroidrunAccessibilityService.getInstance()
@@ -213,18 +216,17 @@ class ReverseConnectionService : Service() {
     
     private fun scheduleReconnect() {
         reconnectAttempt++
-        val backoff = minOf(currentBackoff, MAX_BACKOFF)
+        // Use configured reconnect interval instead of exponential backoff
+        val reconnectDelay = configManager.reconnectInterval
         
-        Log.i(TAG, "Scheduling reconnect in ${backoff}ms (attempt $reconnectAttempt)")
-        updateNotification("等待重连... (${backoff/1000}秒)")
+        Log.i(TAG, "Scheduling reconnect in ${reconnectDelay}ms (attempt $reconnectAttempt)")
+        updateNotification("等待重连... (${reconnectDelay/1000}秒)")
         
         mainHandler.postDelayed({
             if (configManager.reverseConnectionEnabled) {
                 connectToServer()
             }
-        }, backoff)
-        
-        currentBackoff = minOf(currentBackoff * 2, MAX_BACKOFF)
+        }, reconnectDelay)
     }
     
     private fun handleMessage(text: String) {
