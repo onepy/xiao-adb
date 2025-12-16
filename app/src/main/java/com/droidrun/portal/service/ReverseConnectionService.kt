@@ -456,10 +456,15 @@ class ReverseConnectionService : Service() {
     
     private fun sendMessage(message: String) {
         val ws = webSocket
-        if (ws == null || !isInitialized) {
-            Log.w(TAG, "Cannot send message: WebSocket not ready")
+        if (ws == null) {
+            Log.w(TAG, "Cannot send message: WebSocket not connected")
             return
         }
+        
+        // Note: We don't check isInitialized here because:
+        // 1. initialize and tools/list responses need to be sent before isInitialized=true
+        // 2. tools/call requests are already handled by queueing in handleRequest
+        // 3. sendMessage should only check WebSocket connection status
         
         Log.d(TAG, "Sending: ${message.take(200)}")
         ws.send(message)
