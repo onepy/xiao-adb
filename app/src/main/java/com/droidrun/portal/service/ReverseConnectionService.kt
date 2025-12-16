@@ -68,6 +68,17 @@ class ReverseConnectionService : Service() {
     private val tools = mutableMapOf<String, McpToolHandler>()
     private var messageIdCounter = 0
     
+    // Request Queue for handling requests during reconnection
+    private data class PendingRequest(
+        val id: Any,
+        val method: String,
+        val params: JSONObject?,
+        val timestamp: Long = System.currentTimeMillis()
+    )
+    private val pendingRequests = mutableListOf<PendingRequest>()
+    private val maxPendingRequests = 10
+    private val requestTimeout = 30000L // 30 seconds
+    
     override fun onCreate() {
         super.onCreate()
         configManager = ConfigManager.getInstance(this)
@@ -240,6 +251,12 @@ class ReverseConnectionService : Service() {
         
         Log.i(TAG, "Handling request: $method")
         
+        // Check if we should queue the request
+        if (!isInitialized && method == "tools/call") {
+            queueRequest(id, method, params)
+            return
+        }
+        
         when (method) {
             "initialize" -> {
                 val response = createInitializeResponse(id)
@@ -255,6 +272,9 @@ class ReverseConnectionService : Service() {
                 } else {
                     broadcastStatus(STATUS_CONNECTED, "已成功初始化 (${tools.size}个工具可用)")
                 }
+                
+                // Process pending requests after initialization
+                processPendingRequests()
             }
             "tools/list" -> {
                 val response = createToolListResponse(id)
@@ -376,9 +396,73 @@ class ReverseConnectionService : Service() {
         }
     }
     
+    private fun queueRequest(id: Any, method: String, params: JSONObject?) {
+        synchronized(pendingRequests) {
+            // Remove expired requests
+            val now = System.currentTimeMillis()
+            pendingRequests.removeAll { now - it.timestamp > requestTimeout }
+            
+            // Check queue size
+            if (pendingRequests.size >= maxPendingRequests) {
+                Log.w(TAG, "Request queue full, rejecting request")
+                val error = McpError(
+                    code = -32000,
+                    message = "Server is reconnecting, request queue full. Please retry later."
+                )
+                val response = McpResponse(id = id, error = error)
+                sendMessage(response.toJson().toString())
+                return
+            }
+            
+            // Add to queue
+            pendingRequests.add(PendingRequest(id, method, params))
+            Log.i(TAG, "Queued request $method, queue size: ${pendingRequests.size}")
+            
+            // Send pending response
+            val error = McpError(
+                code = -32001,
+                message = "Server is initializing, request queued. It will be processed automatically when ready."
+            )
+            val response = McpResponse(id = id, error = error)
+            sendMessage(response.toJson().toString())
+        }
+    }
+    
+    private fun processPendingRequests() {
+        synchronized(pendingRequests) {
+            if (pendingRequests.isEmpty()) {
+                return
+            }
+            
+            Log.i(TAG, "Processing ${pendingRequests.size} pending requests")
+            val requestsToProcess = pendingRequests.toList()
+            pendingRequests.clear()
+            
+            // Process each pending request
+            requestsToProcess.forEach { request ->
+                Log.i(TAG, "Processing queued request: ${request.method}")
+                when (request.method) {
+                    "tools/call" -> {
+                        val response = handleToolCall(request.id, request.params)
+                        sendMessage(response.toJson().toString())
+                    }
+                    else -> {
+                        Log.w(TAG, "Unknown queued method: ${request.method}")
+                    }
+                }
+            }
+        }
+    }
+    
     private fun sendMessage(message: String) {
+        val ws = webSocket
+        if (ws == null || !isInitialized) {
+            Log.w(TAG, "Cannot send message: WebSocket not ready")
+            return
+        }
+        
         Log.d(TAG, "Sending: ${message.take(200)}")
-        webSocket?.send(message)
+        ws.send(message)
     }
     
     private fun nextMessageId(): Int {
