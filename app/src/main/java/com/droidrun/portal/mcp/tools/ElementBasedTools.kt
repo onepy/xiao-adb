@@ -34,25 +34,29 @@ object ElementFinder {
             return null
         }
         
-        try {
-            val nodes = rootNode.findAccessibilityNodeInfosByViewId(resourceId)
-            if (nodes.isNotEmpty()) {
-                // 返回第一个匹配的节点,不要回收它
-                val result = nodes[0]
-                // 回收其他不需要的节点
-                for (i in 1 until nodes.size) {
-                    nodes[i].recycle()
-                }
-                return result
+        // 不要在finally中回收rootNode!
+        // 因为返回的节点可能依赖rootNode
+        val nodes = rootNode.findAccessibilityNodeInfosByViewId(resourceId)
+        if (nodes.isNotEmpty()) {
+            // 返回第一个匹配的节点
+            val result = nodes[0]
+            // 回收其他不需要的节点
+            for (i in 1 until nodes.size) {
+                nodes[i].recycle()
             }
-            return null
-        } catch (e: Exception) {
-            Log.e(TAG, "Error finding element by resourceId: $resourceId", e)
-            return null
-        } finally {
-            // 回收根节点
-            rootNode.recycle()
+            Log.i(TAG, "Found element by resourceId: $resourceId, bounds: ${getNodeBounds(result)}")
+            return result
         }
+        
+        // 没找到才回收rootNode
+        rootNode.recycle()
+        return null
+    }
+    
+    private fun getNodeBounds(node: android.view.accessibility.AccessibilityNodeInfo): String {
+        val bounds = android.graphics.Rect()
+        node.getBoundsInScreen(bounds)
+        return "(${bounds.left},${bounds.top},${bounds.right},${bounds.bottom})"
     }
     
     /**
@@ -72,33 +76,36 @@ object ElementFinder {
             return null
         }
         
-        try {
-            val nodes = rootNode.findAccessibilityNodeInfosByText(text)
-            if (nodes.isEmpty()) return null
-            
-            val result = if (exact) {
-                // 查找精确匹配的节点
-                val exactMatch = nodes.find { it.text?.toString() == text }
-                // 回收不匹配的节点
-                nodes.forEach { if (it != exactMatch) it.recycle() }
-                exactMatch
-            } else {
-                // 返回第一个匹配的节点
-                val first = nodes[0]
-                // 回收其他节点
-                for (i in 1 until nodes.size) {
-                    nodes[i].recycle()
-                }
-                first
-            }
-            
-            return result
-        } catch (e: Exception) {
-            Log.e(TAG, "Error finding element by text: $text", e)
+        // 不要在finally中回收rootNode!
+        val nodes = rootNode.findAccessibilityNodeInfosByText(text)
+        if (nodes.isEmpty()) {
+            rootNode.recycle()
             return null
-        } finally {
+        }
+        
+        val result = if (exact) {
+            // 查找精确匹配的节点
+            val exactMatch = nodes.find { it.text?.toString() == text }
+            // 回收不匹配的节点
+            nodes.forEach { if (it != exactMatch) it.recycle() }
+            exactMatch
+        } else {
+            // 返回第一个匹配的节点
+            val first = nodes[0]
+            // 回收其他节点
+            for (i in 1 until nodes.size) {
+                nodes[i].recycle()
+            }
+            first
+        }
+        
+        if (result != null) {
+            Log.i(TAG, "Found element by text: $text, bounds: ${getNodeBounds(result)}")
+        } else {
             rootNode.recycle()
         }
+        
+        return result
     }
     
     /**
@@ -118,19 +125,21 @@ object ElementFinder {
             return null
         }
         
-        return try {
-            // 递归查找,不回收rootNode(在finally中回收)
-            findNodeByContentDesc(rootNode, desc)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error finding element by contentDescription: $desc", e)
-            null
-        } finally {
-            rootNode.recycle()
+        // 递归查找,不回收rootNode直到确定是否找到
+        val found = findNodeByContentDesc(rootNode, desc)
+        if (found != null) {
+            Log.i(TAG, "Found element by contentDescription: $desc, bounds: ${getNodeBounds(found)}")
+            return found
         }
+        
+        // 没找到才回收rootNode
+        rootNode.recycle()
+        return null
     }
     
     /**
      * 递归查找具有指定contentDescription的节点
+     * 注意: 不要在这里回收节点!由调用者负责
      */
     private fun findNodeByContentDesc(
         node: android.view.accessibility.AccessibilityNodeInfo,
@@ -138,7 +147,6 @@ object ElementFinder {
     ): android.view.accessibility.AccessibilityNodeInfo? {
         // 检查当前节点
         if (node.contentDescription?.toString() == desc) {
-            // 找到了!不要回收,返回给调用者
             return node
         }
         
@@ -148,15 +156,11 @@ object ElementFinder {
             
             val found = findNodeByContentDesc(child, desc)
             if (found != null) {
-                // 找到了!回收其他子节点,但不回收找到的节点
-                if (found != child) {
-                    child.recycle()
-                }
+                // 找到了!不回收child因为found可能就是child
                 return found
-            } else {
-                // 没找到,回收这个子节点
-                child.recycle()
             }
+            // 没找到,回收这个子节点
+            child.recycle()
         }
         
         return null
@@ -179,18 +183,20 @@ object ElementFinder {
             return null
         }
         
-        return try {
-            findNodeByClassName(rootNode, className)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error finding element by className: $className", e)
-            null
-        } finally {
-            rootNode.recycle()
+        val found = findNodeByClassName(rootNode, className)
+        if (found != null) {
+            Log.i(TAG, "Found element by className: $className, bounds: ${getNodeBounds(found)}")
+            return found
         }
+        
+        // 没找到才回收rootNode
+        rootNode.recycle()
+        return null
     }
     
     /**
      * 递归查找具有指定className的节点
+     * 注意: 不要在这里回收节点!由调用者负责
      */
     private fun findNodeByClassName(
         node: android.view.accessibility.AccessibilityNodeInfo,
@@ -207,13 +213,11 @@ object ElementFinder {
             
             val found = findNodeByClassName(child, className)
             if (found != null) {
-                if (found != child) {
-                    child.recycle()
-                }
+                // 找到了!不回收child因为found可能就是child
                 return found
-            } else {
-                child.recycle()
             }
+            // 没找到,回收这个子节点
+            child.recycle()
         }
         
         return null
