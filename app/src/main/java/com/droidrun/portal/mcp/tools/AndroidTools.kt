@@ -879,3 +879,219 @@ class SwipeTool(private val apiHandler: ApiHandler) : McpToolHandler {
         }
     }
 }
+
+// 11. WaitTool - 等待页面加载
+class WaitTool(private val apiHandler: ApiHandler) : McpToolHandler {
+    
+    companion object {
+        private const val TAG = "WaitTool"
+        private const val MAX_TIMEOUT = 10000L  // 最大等待时间10秒
+        private const val CHECK_INTERVAL = 200L  // 检查间隔200毫秒
+        
+        fun getToolDefinition(): McpTool {
+            val inputSchema = JSONObject().apply {
+                put("type", "object")
+                put("properties", JSONObject().apply {
+                    put("timeout", JSONObject().apply {
+                        put("type", "integer")
+                        put("description", "最大等待时间(毫秒), 最大10000ms (10秒)")
+                        put("default", 5000)
+                        put("minimum", 100)
+                        put("maximum", 10000)
+                    })
+                    put("condition", JSONObject().apply {
+                        put("type", "object")
+                        put("description", "等待条件")
+                        put("properties", JSONObject().apply {
+                            put("text", JSONObject().apply {
+                                put("type", "string")
+                                put("description", "等待包含特定文本的元素出现")
+                            })
+                            put("resource_id", JSONObject().apply {
+                                put("type", "string")
+                                put("description", "等待具有特定resource-id的元素出现")
+                            })
+                            put("class_name", JSONObject().apply {
+                                put("type", "string")
+                                put("description", "等待具有特定类名的元素出现")
+                            })
+                            put("content_description", JSONObject().apply {
+                                put("type", "string")
+                                put("description", "等待具有特定content-description的元素出现")
+                            })
+                            put("not_present", JSONObject().apply {
+                                put("type", "boolean")
+                                put("description", "如果为true,则等待元素消失而非出现")
+                                put("default", false)
+                            })
+                        })
+                    })
+                })
+                put("required", org.json.JSONArray().apply {
+                    put("condition")
+                })
+            }
+            
+            return McpTool(
+                name = "android.wait",
+                description = """
+                    等待 Android 设备屏幕上的元素状态变化。
+                    此工具会周期性检查屏幕状态,直到满足指定条件或超时。
+                    
+                    **何时使用:**
+                    - 需要等待页面加载完成时。
+                    - 需要等待特定元素出现或消失时。
+                    - 需要在操作后等待界面更新时。
+                    
+                    **参数:**
+                    - `timeout` (integer, 可选, 默认: 5000): 最大等待时间(毫秒), 范围100-10000ms。
+                    - `condition` (object, 必需): 等待条件,至少包含以下一个属性:
+                      - `text` (string, 可选): 等待包含此文本的元素出现。
+                      - `resource_id` (string, 可选): 等待具有此resource-id的元素出现。
+                      - `class_name` (string, 可选): 等待具有此类名的元素出现。
+                      - `content_description` (string, 可选): 等待具有此content-description的元素出现。
+                      - `not_present` (boolean, 可选, 默认: false): 如果为true,则等待元素消失。
+                    
+                    **如何使用:**
+                    调用此工具并提供 `condition` 参数。可以组合多个条件,元素需要满足所有条件。
+                """.trimIndent(),
+                inputSchema = inputSchema
+            )
+        }
+    }
+    
+    override fun execute(arguments: JSONObject?): JSONObject {
+        return try {
+            val timeout = arguments?.optLong("timeout", 5000L)?.coerceIn(100L, MAX_TIMEOUT) ?: 5000L
+            val condition = arguments?.optJSONObject("condition")
+                ?: throw IllegalArgumentException("Missing condition parameter")
+            
+            // 提取条件
+            val text = condition.optString("text", null)
+            val resourceId = condition.optString("resource_id", null)
+            val className = condition.optString("class_name", null)
+            val contentDescription = condition.optString("content_description", null)
+            val notPresent = condition.optBoolean("not_present", false)
+            
+            // 至少需要一个条件
+            if (text.isNullOrEmpty() && resourceId.isNullOrEmpty() &&
+                className.isNullOrEmpty() && contentDescription.isNullOrEmpty()) {
+                throw IllegalArgumentException("At least one condition must be specified")
+            }
+            
+            Log.i(TAG, "Waiting for condition (timeout=${timeout}ms, notPresent=$notPresent)")
+            
+            val startTime = System.currentTimeMillis()
+            var lastError: String? = null
+            
+            while (System.currentTimeMillis() - startTime < timeout) {
+                try {
+                    // 获取当前屏幕状态
+                    when (val response = apiHandler.getStateFull(true)) {
+                        is ApiResponse.Success -> {
+                            val stateData = response.data as String
+                            val stateJson = JSONObject(stateData)
+                            val a11yTree = stateJson.optJSONObject("a11y_tree")
+                            
+                            if (a11yTree != null) {
+                                val found = checkCondition(a11yTree, text, resourceId, className, contentDescription)
+                                
+                                // 根据 notPresent 判断是否满足条件
+                                if (notPresent && !found) {
+                                    // 等待元素消失,且确实消失了
+                                    return JSONObject().apply {
+                                        put("success", true)
+                                        put("message", "Element no longer present")
+                                        put("elapsed_ms", System.currentTimeMillis() - startTime)
+                                    }
+                                } else if (!notPresent && found) {
+                                    // 等待元素出现,且确实出现了
+                                    return JSONObject().apply {
+                                        put("success", true)
+                                        put("message", "Element found")
+                                        put("elapsed_ms", System.currentTimeMillis() - startTime)
+                                    }
+                                }
+                            }
+                        }
+                        is ApiResponse.Error -> {
+                            lastError = response.message
+                        }
+                        else -> {
+                            lastError = "Unexpected response type"
+                        }
+                    }
+                } catch (e: Exception) {
+                    lastError = e.message
+                }
+                
+                // 等待一段时间后重试
+                Thread.sleep(CHECK_INTERVAL)
+            }
+            
+            // 超时
+            JSONObject().apply {
+                put("success", false)
+                put("error", "Timeout: condition not met within ${timeout}ms")
+                if (lastError != null) {
+                    put("last_error", lastError)
+                }
+            }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error waiting", e)
+            JSONObject().apply {
+                put("success", false)
+                put("error", e.message ?: "Unknown error")
+            }
+        }
+    }
+    
+    private fun checkCondition(
+        node: JSONObject,
+        text: String?,
+        resourceId: String?,
+        className: String?,
+        contentDescription: String?
+    ): Boolean {
+        // 检查当前节点是否匹配所有条件
+        var matches = true
+        
+        if (!text.isNullOrEmpty()) {
+            val nodeText = node.optString("text", "")
+            matches = matches && nodeText.contains(text, ignoreCase = true)
+        }
+        
+        if (!resourceId.isNullOrEmpty()) {
+            val nodeResourceId = node.optString("resourceId", "")
+            matches = matches && nodeResourceId.contains(resourceId)
+        }
+        
+        if (!className.isNullOrEmpty()) {
+            val nodeClassName = node.optString("className", "")
+            matches = matches && nodeClassName.contains(className)
+        }
+        
+        if (!contentDescription.isNullOrEmpty()) {
+            val nodeContentDesc = node.optString("contentDescription", "")
+            matches = matches && nodeContentDesc.contains(contentDescription, ignoreCase = true)
+        }
+        
+        if (matches) {
+            return true
+        }
+        
+        // 递归检查子节点
+        val children = node.optJSONArray("children")
+        if (children != null) {
+            for (i in 0 until children.length()) {
+                val child = children.optJSONObject(i)
+                if (child != null && checkCondition(child, text, resourceId, className, contentDescription)) {
+                    return true
+                }
+            }
+        }
+        
+        return false
+    }
+}

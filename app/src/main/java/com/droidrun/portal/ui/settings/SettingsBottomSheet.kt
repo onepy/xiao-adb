@@ -69,8 +69,27 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         // Server Settings
         val switchWsEnabled = view.findViewById<SwitchMaterial>(R.id.switch_ws_enabled)
         val inputWsPort = view.findViewById<TextInputEditText>(R.id.input_ws_port)
+        val inputScreenshotQuality = view.findViewById<TextInputEditText>(R.id.input_screenshot_quality)
 
         switchWsEnabled.isChecked = configManager.websocketEnabled
+        
+        // Setup screenshot quality input
+        inputScreenshotQuality.setText(configManager.screenshotQuality.toString())
+        inputScreenshotQuality.setOnEditorActionListener { v, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                val quality = v.text.toString().toIntOrNull()
+                if (quality != null && quality in 1..100) {
+                    configManager.screenshotQuality = quality
+                    inputScreenshotQuality.clearFocus()
+                    Toast.makeText(requireContext(), "截图质量已设置为 $quality%", Toast.LENGTH_SHORT).show()
+                } else {
+                    inputScreenshotQuality.error = "Invalid Quality (1-100)"
+                }
+                true
+            } else {
+                false
+            }
+        }
         switchWsEnabled.setOnCheckedChangeListener { _, isChecked ->
             configManager.setWebSocketEnabledWithNotification(isChecked)
         }
@@ -228,6 +247,12 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
                 displayName = "Swipe",
                 description = "滑动屏幕",
                 toolDefinition = com.droidrun.portal.mcp.tools.SwipeTool.getToolDefinition()
+            ),
+            ToolInfo(
+                name = "android.wait",
+                displayName = "Wait",
+                description = "等待页面加载",
+                toolDefinition = com.droidrun.portal.mcp.tools.WaitTool.getToolDefinition()
             )
         )
         

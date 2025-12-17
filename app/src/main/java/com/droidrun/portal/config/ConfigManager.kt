@@ -39,6 +39,10 @@ class ConfigManager private constructor(private val context: Context) {
         private const val DEFAULT_OFFSET = 0
         private const val DEFAULT_SOCKET_PORT = 8080
         private const val DEFAULT_WEBSOCKET_PORT = 8081
+        private const val DEFAULT_SCREENSHOT_QUALITY = 70
+        
+        // Screenshot settings
+        private const val KEY_SCREENSHOT_QUALITY = "screenshot_quality"
         
         // Default heartbeat settings (in milliseconds)
         private const val DEFAULT_HEARTBEAT_INTERVAL = 30000L  // 30 seconds
@@ -174,6 +178,13 @@ class ConfigManager private constructor(private val context: Context) {
         get() = sharedPrefs.getLong(KEY_RECONNECT_INTERVAL, DEFAULT_RECONNECT_INTERVAL)
         set(value) {
             sharedPrefs.edit { putLong(KEY_RECONNECT_INTERVAL, value) }
+        }
+    
+    // Screenshot quality (1-100)
+    var screenshotQuality: Int
+        get() = sharedPrefs.getInt(KEY_SCREENSHOT_QUALITY, DEFAULT_SCREENSHOT_QUALITY)
+        set(value) {
+            sharedPrefs.edit { putInt(KEY_SCREENSHOT_QUALITY, value.coerceIn(1, 100)) }
         }
 
     // Dynamic Event Toggles
