@@ -262,18 +262,29 @@ class LaunchAppTool(private val apiHandler: ApiHandler) : McpToolHandler {
                     JSONObject().apply {
                         put("success", true)
                         put("message", response.data)
+                        put("next_action", "请立即调用 android.screen.dump 工具确认应用是否成功启动并显示正确界面")
                     }
                 }
                 is ApiResponse.Error -> {
+                    val isNetworkError = response.message.contains("network", ignoreCase = true) ||
+                                        response.message.contains("timeout", ignoreCase = true) ||
+                                        response.message.contains("connection", ignoreCase = true)
+                    
                     JSONObject().apply {
                         put("success", false)
                         put("error", response.message)
+                        if (isNetworkError) {
+                            put("next_action", "网络错误,请重新执行此操作，连续五次报错后再反馈用户")
+                        } else {
+                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
+                        }
                     }
                 }
                 else -> {
                     JSONObject().apply {
                         put("success", false)
                         put("error", "Unexpected response type")
+                        put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                     }
                 }
             }
@@ -350,18 +361,29 @@ class InputTextTool(private val apiHandler: ApiHandler) : McpToolHandler {
                     JSONObject().apply {
                         put("success", true)
                         put("message", response.data)
+                        put("next_action", "请立即调用 android.screen.dump 工具确认文本是否成功输入")
                     }
                 }
                 is ApiResponse.Error -> {
+                    val isNetworkError = response.message.contains("network", ignoreCase = true) ||
+                                        response.message.contains("timeout", ignoreCase = true) ||
+                                        response.message.contains("connection", ignoreCase = true)
+                    
                     JSONObject().apply {
                         put("success", false)
                         put("error", response.message)
+                        if (isNetworkError) {
+                            put("next_action", "网络错误,请重新执行此操作，连续五次报错后再反馈用户")
+                        } else {
+                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
+                        }
                     }
                 }
                 else -> {
                     JSONObject().apply {
                         put("success", false)
                         put("error", "Unexpected response type")
+                        put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                     }
                 }
             }
@@ -416,18 +438,29 @@ class ClearTextTool(private val apiHandler: ApiHandler) : McpToolHandler {
                     JSONObject().apply {
                         put("success", true)
                         put("message", response.data)
+                        put("next_action", "请立即调用 android.screen.dump 工具确认文本是否已清除")
                     }
                 }
                 is ApiResponse.Error -> {
+                    val isNetworkError = response.message.contains("network", ignoreCase = true) ||
+                                        response.message.contains("timeout", ignoreCase = true) ||
+                                        response.message.contains("connection", ignoreCase = true)
+                    
                     JSONObject().apply {
                         put("success", false)
                         put("error", response.message)
+                        if (isNetworkError) {
+                            put("next_action", "网络错误,请重新执行此操作，连续五次报错后再反馈用户")
+                        } else {
+                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
+                        }
                     }
                 }
                 else -> {
                     JSONObject().apply {
                         put("success", false)
                         put("error", "Unexpected response type")
+                        put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                     }
                 }
             }
@@ -503,18 +536,29 @@ class PressKeyTool(private val apiHandler: ApiHandler) : McpToolHandler {
                     JSONObject().apply {
                         put("success", true)
                         put("message", response.data)
+                        put("next_action", "请立即调用 android.screen.dump 工具确认按键操作是否生效")
                     }
                 }
                 is ApiResponse.Error -> {
+                    val isNetworkError = response.message.contains("network", ignoreCase = true) ||
+                                        response.message.contains("timeout", ignoreCase = true) ||
+                                        response.message.contains("connection", ignoreCase = true)
+                    
                     JSONObject().apply {
                         put("success", false)
                         put("error", response.message)
+                        if (isNetworkError) {
+                            put("next_action", "网络错误,请重新执行此操作，连续五次报错后再反馈用户")
+                        } else {
+                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
+                        }
                     }
                 }
                 else -> {
                     JSONObject().apply {
                         put("success", false)
                         put("error", "Unexpected response type")
+                        put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                     }
                 }
             }
@@ -587,18 +631,29 @@ class TapTool(private val apiHandler: ApiHandler) : McpToolHandler {
                     JSONObject().apply {
                         put("success", true)
                         put("message", response.data)
+                        put("next_action", "请立即调用 android.screen.dump 工具确认点击操作是否生效")
                     }
                 }
                 is ApiResponse.Error -> {
+                    val isNetworkError = response.message.contains("network", ignoreCase = true) ||
+                                        response.message.contains("timeout", ignoreCase = true) ||
+                                        response.message.contains("connection", ignoreCase = true)
+                    
                     JSONObject().apply {
                         put("success", false)
                         put("error", response.message)
+                        if (isNetworkError) {
+                            put("next_action", "网络错误,请重新执行此操作，连续五次报错后再反馈用户")
+                        } else {
+                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
+                        }
                     }
                 }
                 else -> {
                     JSONObject().apply {
                         put("success", false)
                         put("error", "Unexpected response type")
+                        put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                     }
                 }
             }
@@ -671,18 +726,29 @@ class DoubleTapTool(private val apiHandler: ApiHandler) : McpToolHandler {
                     JSONObject().apply {
                         put("success", true)
                         put("message", response.data)
+                        put("next_action", "请立即调用 android.screen.dump 工具确认双击操作是否生效")
                     }
                 }
                 is ApiResponse.Error -> {
+                    val isNetworkError = response.message.contains("network", ignoreCase = true) ||
+                                        response.message.contains("timeout", ignoreCase = true) ||
+                                        response.message.contains("connection", ignoreCase = true)
+                    
                     JSONObject().apply {
                         put("success", false)
                         put("error", response.message)
+                        if (isNetworkError) {
+                            put("next_action", "网络错误,请重新执行此操作，连续五次报错后再反馈用户")
+                        } else {
+                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
+                        }
                     }
                 }
                 else -> {
                     JSONObject().apply {
                         put("success", false)
                         put("error", "Unexpected response type")
+                        put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                     }
                 }
             }
@@ -761,18 +827,29 @@ class LongPressTool(private val apiHandler: ApiHandler) : McpToolHandler {
                     JSONObject().apply {
                         put("success", true)
                         put("message", response.data)
+                        put("next_action", "请立即调用 android.screen.dump 工具确认长按操作是否生效")
                     }
                 }
                 is ApiResponse.Error -> {
+                    val isNetworkError = response.message.contains("network", ignoreCase = true) ||
+                                        response.message.contains("timeout", ignoreCase = true) ||
+                                        response.message.contains("connection", ignoreCase = true)
+                    
                     JSONObject().apply {
                         put("success", false)
                         put("error", response.message)
+                        if (isNetworkError) {
+                            put("next_action", "网络错误,请重新执行此操作，连续五次报错后再反馈用户")
+                        } else {
+                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
+                        }
                     }
                 }
                 else -> {
                     JSONObject().apply {
                         put("success", false)
                         put("error", "Unexpected response type")
+                        put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                     }
                 }
             }
@@ -865,18 +942,29 @@ class SwipeTool(private val apiHandler: ApiHandler) : McpToolHandler {
                     JSONObject().apply {
                         put("success", true)
                         put("message", response.data)
+                        put("next_action", "请立即调用 android.screen.dump 工具确认滑动操作是否生效")
                     }
                 }
                 is ApiResponse.Error -> {
+                    val isNetworkError = response.message.contains("network", ignoreCase = true) ||
+                                        response.message.contains("timeout", ignoreCase = true) ||
+                                        response.message.contains("connection", ignoreCase = true)
+                    
                     JSONObject().apply {
                         put("success", false)
                         put("error", response.message)
+                        if (isNetworkError) {
+                            put("next_action", "网络错误,请重新执行此操作，连续五次报错后再反馈用户")
+                        } else {
+                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
+                        }
                     }
                 }
                 else -> {
                     JSONObject().apply {
                         put("success", false)
                         put("error", "Unexpected response type")
+                        put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                     }
                 }
             }

@@ -495,8 +495,10 @@ class ClickElementTool(private val apiHandler: ApiHandler) : McpToolHandler {
                         put("success", success)
                         if (success) {
                             put("message", "Element clicked successfully")
+                            put("next_action", "请立即调用 android.screen.dump 工具确认点击操作是否生效")
                         } else {
                             put("error", "Failed to perform click action")
+                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                         }
                     }
                 } finally {
@@ -623,8 +625,10 @@ class ScrollElementTool(private val apiHandler: ApiHandler) : McpToolHandler {
                         put("success", success)
                         if (success) {
                             put("message", "Element scrolled $direction successfully")
+                            put("next_action", "请立即调用 android.screen.dump 工具确认滚动操作是否生效")
                         } else {
                             put("error", "Failed to scroll element")
+                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                         }
                     }
                 } finally {
@@ -725,8 +729,10 @@ class LongPressElementTool(private val apiHandler: ApiHandler) : McpToolHandler 
                         put("success", success)
                         if (success) {
                             put("message", "Element long pressed successfully")
+                            put("next_action", "请立即调用 android.screen.dump 工具确认长按操作是否生效")
                         } else {
                             put("error", "Failed to long press element")
+                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                         }
                     }
                 } finally {
@@ -854,8 +860,10 @@ class SetTextTool(private val apiHandler: ApiHandler) : McpToolHandler {
                         put("success", success)
                         if (success) {
                             put("message", "Text set successfully")
+                            put("next_action", "请立即调用 android.screen.dump 工具确认文本是否成功设置")
                         } else {
                             put("error", "Failed to set text")
+                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                         }
                     }
                 } finally {
@@ -967,8 +975,10 @@ class ToggleCheckboxTool(private val apiHandler: ApiHandler) : McpToolHandler {
                             put("message", "Checkbox toggled from ${if (wasChecked) "checked" else "unchecked"} to ${if (!wasChecked) "checked" else "unchecked"}")
                             put("previous_state", wasChecked)
                             put("new_state", !wasChecked)
+                            put("next_action", "请立即调用 android.screen.dump 工具确认复选框状态是否改变")
                         } else {
                             put("error", "Failed to toggle checkbox")
+                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                         }
                     }
                 } finally {
@@ -1074,8 +1084,10 @@ class DoubleTapElementTool(private val apiHandler: ApiHandler) : McpToolHandler 
                         put("success", success)
                         if (success) {
                             put("message", "Element double tapped successfully")
+                            put("next_action", "请立即调用 android.screen.dump 工具确认双击操作是否生效")
                         } else {
                             put("error", "Failed to double tap element")
+                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                         }
                     }
                 } finally {
@@ -1201,12 +1213,22 @@ class DragElementTool(private val apiHandler: ApiHandler) : McpToolHandler {
                             JSONObject().apply {
                                 put("success", true)
                                 put("message", "Element dragged successfully from ($startX,$startY) to ($targetX,$targetY)")
+                                put("next_action", "请立即调用 android.screen.dump 工具确认拖动操作是否生效")
                             }
                         }
                         is com.droidrun.portal.api.ApiResponse.Error -> {
+                            val isNetworkError = response.message.contains("network", ignoreCase = true) ||
+                                                response.message.contains("timeout", ignoreCase = true) ||
+                                                response.message.contains("connection", ignoreCase = true)
+                            
                             JSONObject().apply {
                                 put("success", false)
                                 put("error", response.message)
+                                if (isNetworkError) {
+                                    put("next_action", "网络错误,请重新执行此操作，连续五次报错后再反馈用户")
+                                } else {
+                                    put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
+                                }
                             }
                         }
                         else -> {
