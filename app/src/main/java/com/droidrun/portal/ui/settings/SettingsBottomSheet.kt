@@ -75,6 +75,16 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         
         // Setup screenshot quality input
         inputScreenshotQuality.setText(configManager.screenshotQuality.toString())
+        inputScreenshotQuality.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                val quality = s.toString().toIntOrNull()
+                if (quality != null && quality in 1..100) {
+                    configManager.screenshotQuality = quality
+                }
+            }
+        })
         inputScreenshotQuality.setOnEditorActionListener { v, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
                 val quality = v.text.toString().toIntOrNull()
