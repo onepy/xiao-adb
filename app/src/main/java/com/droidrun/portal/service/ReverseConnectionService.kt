@@ -132,7 +132,7 @@ class ReverseConnectionService : Service() {
         // Math tool
         tools["calculator"] = CalculatorTool()
         
-        // Android operation tools (无障碍服务)
+        // Android operation tools (无障碍服务 - 基于坐标)
         tools["android.screen.dump"] = GetStateTool(apiHandler)
         tools["android.packages.list"] = GetPackagesTool(apiHandler)
         tools["android.launch_app"] = LaunchAppTool(apiHandler)
@@ -143,6 +143,17 @@ class ReverseConnectionService : Service() {
         tools["android.double_tap"] = DoubleTapTool(apiHandler)
         tools["android.long_press"] = LongPressTool(apiHandler)
         tools["android.swipe"] = SwipeTool(apiHandler)
+        tools["android.wait"] = WaitTool(apiHandler)
+        
+        // Element-based operation tools (基于控件)
+        tools["android.element.find"] = FindElementTool(apiHandler)
+        tools["android.element.click"] = ClickElementTool(apiHandler)
+        tools["android.element.scroll"] = ScrollElementTool(apiHandler)
+        tools["android.element.long_press"] = LongPressElementTool(apiHandler)
+        tools["android.element.set_text"] = SetTextTool(apiHandler)
+        tools["android.element.toggle_checkbox"] = ToggleCheckboxTool(apiHandler)
+        tools["android.element.double_tap"] = DoubleTapElementTool(apiHandler)
+        tools["android.element.drag"] = DragElementTool(apiHandler)
         
         Log.i(TAG, "Registered ${tools.size} tools")
     }
@@ -342,7 +353,16 @@ class ReverseConnectionService : Service() {
             "android.tap" to TapTool.getToolDefinition(),
             "android.double_tap" to DoubleTapTool.getToolDefinition(),
             "android.long_press" to LongPressTool.getToolDefinition(),
-            "android.swipe" to SwipeTool.getToolDefinition()
+            "android.swipe" to SwipeTool.getToolDefinition(),
+            "android.wait" to WaitTool.getToolDefinition(),
+            "android.element.find" to FindElementTool.getToolDefinition(),
+            "android.element.click" to ClickElementTool.getToolDefinition(),
+            "android.element.scroll" to ScrollElementTool.getToolDefinition(),
+            "android.element.long_press" to LongPressElementTool.getToolDefinition(),
+            "android.element.set_text" to SetTextTool.getToolDefinition(),
+            "android.element.toggle_checkbox" to ToggleCheckboxTool.getToolDefinition(),
+            "android.element.double_tap" to DoubleTapElementTool.getToolDefinition(),
+            "android.element.drag" to DragElementTool.getToolDefinition()
         )
         
         // Add only enabled tools to the list

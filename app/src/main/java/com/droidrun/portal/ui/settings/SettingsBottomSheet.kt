@@ -263,6 +263,54 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
                 displayName = "Wait",
                 description = "等待页面加载",
                 toolDefinition = com.droidrun.portal.mcp.tools.WaitTool.getToolDefinition()
+            ),
+            ToolInfo(
+                name = "android.element.find",
+                displayName = "Find Element",
+                description = "查找控件元素",
+                toolDefinition = com.droidrun.portal.mcp.tools.FindElementTool.getToolDefinition()
+            ),
+            ToolInfo(
+                name = "android.element.click",
+                displayName = "Click Element",
+                description = "点击控件",
+                toolDefinition = com.droidrun.portal.mcp.tools.ClickElementTool.getToolDefinition()
+            ),
+            ToolInfo(
+                name = "android.element.scroll",
+                displayName = "Scroll Element",
+                description = "滚动控件内部",
+                toolDefinition = com.droidrun.portal.mcp.tools.ScrollElementTool.getToolDefinition()
+            ),
+            ToolInfo(
+                name = "android.element.long_press",
+                displayName = "Long Press Element",
+                description = "长按控件",
+                toolDefinition = com.droidrun.portal.mcp.tools.LongPressElementTool.getToolDefinition()
+            ),
+            ToolInfo(
+                name = "android.element.set_text",
+                displayName = "Set Text",
+                description = "设置控件文本",
+                toolDefinition = com.droidrun.portal.mcp.tools.SetTextTool.getToolDefinition()
+            ),
+            ToolInfo(
+                name = "android.element.toggle_checkbox",
+                displayName = "Toggle Checkbox",
+                description = "切换复选框状态",
+                toolDefinition = com.droidrun.portal.mcp.tools.ToggleCheckboxTool.getToolDefinition()
+            ),
+            ToolInfo(
+                name = "android.element.double_tap",
+                displayName = "Double Tap Element",
+                description = "双击控件",
+                toolDefinition = com.droidrun.portal.mcp.tools.DoubleTapElementTool.getToolDefinition()
+            ),
+            ToolInfo(
+                name = "android.element.drag",
+                displayName = "Drag Element",
+                description = "拖动控件",
+                toolDefinition = com.droidrun.portal.mcp.tools.DragElementTool.getToolDefinition()
             )
         )
         
