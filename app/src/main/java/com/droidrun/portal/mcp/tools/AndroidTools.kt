@@ -1111,14 +1111,6 @@ class WaitTool(private val apiHandler: ApiHandler) : McpToolHandler {
 // ============================================================================
 
 /**
- * 控件操作工具的基础接口
- * 所有基于控件ID/属性的操作工具都需要实现此接口
- */
-interface McpToolHandler {
-    fun execute(arguments: JSONObject?): JSONObject
-}
-
-/**
  * 控件查找辅助类
  * 提供通用的控件查找逻辑
  */
