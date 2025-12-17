@@ -19,42 +19,80 @@ object ElementFinder {
     
     /**
      * 根据resourceId查找控件
+     * 注意: 调用者负责回收返回的节点
      */
     fun findByResourceId(resourceId: String): android.view.accessibility.AccessibilityNodeInfo? {
         val service = com.droidrun.portal.service.DroidrunAccessibilityService.getInstance()
-            ?: return null
+        if (service == null) {
+            Log.e(TAG, "AccessibilityService not available")
+            return null
+        }
         
-        val rootNode = service.rootInActiveWindow ?: return null
+        val rootNode = service.rootInActiveWindow
+        if (rootNode == null) {
+            Log.e(TAG, "Root node not available")
+            return null
+        }
         
         try {
             val nodes = rootNode.findAccessibilityNodeInfosByViewId(resourceId)
-            return if (nodes.isNotEmpty()) nodes[0] else null
+            if (nodes.isNotEmpty()) {
+                // 返回第一个匹配的节点,不要回收它
+                val result = nodes[0]
+                // 回收其他不需要的节点
+                for (i in 1 until nodes.size) {
+                    nodes[i].recycle()
+                }
+                return result
+            }
+            return null
         } catch (e: Exception) {
             Log.e(TAG, "Error finding element by resourceId: $resourceId", e)
             return null
         } finally {
+            // 回收根节点
             rootNode.recycle()
         }
     }
     
     /**
      * 根据文本查找控件
+     * 注意: 调用者负责回收返回的节点
      */
     fun findByText(text: String, exact: Boolean = false): android.view.accessibility.AccessibilityNodeInfo? {
         val service = com.droidrun.portal.service.DroidrunAccessibilityService.getInstance()
-            ?: return null
+        if (service == null) {
+            Log.e(TAG, "AccessibilityService not available")
+            return null
+        }
         
-        val rootNode = service.rootInActiveWindow ?: return null
+        val rootNode = service.rootInActiveWindow
+        if (rootNode == null) {
+            Log.e(TAG, "Root node not available")
+            return null
+        }
         
         try {
             val nodes = rootNode.findAccessibilityNodeInfosByText(text)
             if (nodes.isEmpty()) return null
             
-            return if (exact) {
-                nodes.find { it.text?.toString() == text }
+            val result = if (exact) {
+                // 查找精确匹配的节点
+                val exactMatch = nodes.find { it.text?.toString() == text }
+                // 回收不匹配的节点
+                nodes.forEach { if (it != exactMatch) it.recycle() }
+                exactMatch
             } else {
-                nodes[0]
+                // 返回第一个匹配的节点
+                val first = nodes[0]
+                // 回收其他节点
+                for (i in 1 until nodes.size) {
+                    nodes[i].recycle()
+                }
+                first
             }
+            
+            return result
         } catch (e: Exception) {
             Log.e(TAG, "Error finding element by text: $text", e)
             return null
@@ -65,18 +103,27 @@ object ElementFinder {
     
     /**
      * 根据contentDescription查找控件
+     * 注意: 调用者负责回收返回的节点
      */
     fun findByContentDescription(desc: String): android.view.accessibility.AccessibilityNodeInfo? {
         val service = com.droidrun.portal.service.DroidrunAccessibilityService.getInstance()
-            ?: return null
+        if (service == null) {
+            Log.e(TAG, "AccessibilityService not available")
+            return null
+        }
         
-        val rootNode = service.rootInActiveWindow ?: return null
+        val rootNode = service.rootInActiveWindow
+        if (rootNode == null) {
+            Log.e(TAG, "Root node not available")
+            return null
+        }
         
-        try {
-            return findNodeByContentDesc(rootNode, desc)
+        return try {
+            // 递归查找,不回收rootNode(在finally中回收)
+            findNodeByContentDesc(rootNode, desc)
         } catch (e: Exception) {
             Log.e(TAG, "Error finding element by contentDescription: $desc", e)
-            return null
+            null
         } finally {
             rootNode.recycle()
         }
@@ -89,16 +136,25 @@ object ElementFinder {
         node: android.view.accessibility.AccessibilityNodeInfo,
         desc: String
     ): android.view.accessibility.AccessibilityNodeInfo? {
+        // 检查当前节点
         if (node.contentDescription?.toString() == desc) {
-            return android.view.accessibility.AccessibilityNodeInfo(node)
+            // 找到了!不要回收,返回给调用者
+            return node
         }
         
+        // 递归检查子节点
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            try {
-                val found = findNodeByContentDesc(child, desc)
-                if (found != null) return found
-            } finally {
+            
+            val found = findNodeByContentDesc(child, desc)
+            if (found != null) {
+                // 找到了!回收其他子节点,但不回收找到的节点
+                if (found != child) {
+                    child.recycle()
+                }
+                return found
+            } else {
+                // 没找到,回收这个子节点
                 child.recycle()
             }
         }
@@ -108,18 +164,26 @@ object ElementFinder {
     
     /**
      * 根据className查找控件
+     * 注意: 调用者负责回收返回的节点
      */
     fun findByClassName(className: String): android.view.accessibility.AccessibilityNodeInfo? {
         val service = com.droidrun.portal.service.DroidrunAccessibilityService.getInstance()
-            ?: return null
+        if (service == null) {
+            Log.e(TAG, "AccessibilityService not available")
+            return null
+        }
         
-        val rootNode = service.rootInActiveWindow ?: return null
+        val rootNode = service.rootInActiveWindow
+        if (rootNode == null) {
+            Log.e(TAG, "Root node not available")
+            return null
+        }
         
-        try {
-            return findNodeByClassName(rootNode, className)
+        return try {
+            findNodeByClassName(rootNode, className)
         } catch (e: Exception) {
             Log.e(TAG, "Error finding element by className: $className", e)
-            return null
+            null
         } finally {
             rootNode.recycle()
         }
@@ -132,16 +196,22 @@ object ElementFinder {
         node: android.view.accessibility.AccessibilityNodeInfo,
         className: String
     ): android.view.accessibility.AccessibilityNodeInfo? {
+        // 检查当前节点
         if (node.className?.toString() == className) {
-            return android.view.accessibility.AccessibilityNodeInfo(node)
+            return node
         }
         
+        // 递归检查子节点
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            try {
-                val found = findNodeByClassName(child, className)
-                if (found != null) return found
-            } finally {
+            
+            val found = findNodeByClassName(child, className)
+            if (found != null) {
+                if (found != child) {
+                    child.recycle()
+                }
+                return found
+            } else {
                 child.recycle()
             }
         }
@@ -151,6 +221,7 @@ object ElementFinder {
     
     /**
      * 通用查找方法 - 支持多种查找策略
+     * 注意: 调用者负责回收返回的节点
      */
     fun find(
         resourceId: String? = null,
@@ -158,30 +229,43 @@ object ElementFinder {
         contentDescription: String? = null,
         className: String? = null
     ): android.view.accessibility.AccessibilityNodeInfo? {
-        // 优先使用resourceId
+        // 优先使用resourceId(最准确)
         if (!resourceId.isNullOrEmpty()) {
             val node = findByResourceId(resourceId)
-            if (node != null) return node
+            if (node != null) {
+                Log.i(TAG, "Found element by resourceId: $resourceId")
+                return node
+            }
         }
         
         // 其次使用text
         if (!text.isNullOrEmpty()) {
             val node = findByText(text)
-            if (node != null) return node
+            if (node != null) {
+                Log.i(TAG, "Found element by text: $text")
+                return node
+            }
         }
         
         // 然后使用contentDescription
         if (!contentDescription.isNullOrEmpty()) {
             val node = findByContentDescription(contentDescription)
-            if (node != null) return node
+            if (node != null) {
+                Log.i(TAG, "Found element by contentDescription: $contentDescription")
+                return node
+            }
         }
         
         // 最后使用className
         if (!className.isNullOrEmpty()) {
             val node = findByClassName(className)
-            if (node != null) return node
+            if (node != null) {
+                Log.i(TAG, "Found element by className: $className")
+                return node
+            }
         }
         
+        Log.w(TAG, "Element not found with any search criteria")
         return null
     }
 }
