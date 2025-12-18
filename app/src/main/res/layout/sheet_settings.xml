@@ -4,8 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@color/background_primary"
-    android:paddingBottom="24dp">
+    android:background="@color/background_primary">
 
     <!-- Drag Handle -->
     <View
@@ -27,6 +26,19 @@
         android:textStyle="bold"
         android:paddingHorizontal="24dp"
         android:paddingBottom="16dp" />
+
+    <!-- Scrollable Content Container -->
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="false">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingBottom="24dp">
 
     <!-- Server Settings -->
     <TextView
@@ -141,36 +153,38 @@
         </com.google.android.material.textfield.TextInputLayout>
     </LinearLayout>
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingHorizontal="24dp"
-        android:paddingBottom="12dp"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-        app:boxStrokeColor="@color/text_gray"
-        app:hintTextColor="@color/text_gray"
-        android:hint="Vision AI 自定义提示词">
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="24dp"
+                android:paddingBottom="12dp"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                app:boxStrokeColor="@color/text_gray"
+                app:hintTextColor="@color/text_gray"
+                android:hint="Vision AI 自定义提示词">
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/input_vision_prompt"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="textMultiLine"
-            android:textColor="@color/text_white"
-            android:minLines="3"
-            android:maxLines="6"
-            android:gravity="top|start"
-            android:scrollbars="vertical" />
-    </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/input_vision_prompt"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textMultiLine|textNoSuggestions"
+                    android:textColor="@color/text_white"
+                    android:minLines="3"
+                    android:maxLines="6"
+                    android:gravity="top|start"
+                    android:scrollbars="vertical"
+                    android:overScrollMode="always"
+                    android:scrollbarStyle="insideInset" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/divider_color"
-        android:layout_marginVertical="8dp" />
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/divider_color"
+                android:layout_marginVertical="8dp" />
 
-    <!-- Reverse Connection -->
-    <TextView
+            <!-- Reverse Connection -->
+            <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="REVERSE CONNECTION (CLIENT MODE)"
@@ -233,41 +247,32 @@
             android:textColor="@color/text_white" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- MCP Tools Section -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="无障碍工具 (ACCESSIBILITY TOOLS)"
-        android:textColor="@color/text_gray"
-        android:textSize="12sp"
-        android:textStyle="bold"
-        android:paddingHorizontal="24dp"
-        android:paddingTop="16dp"
-        android:paddingBottom="8dp" />
+            <!-- MCP Tools Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="无障碍工具 (ACCESSIBILITY TOOLS)"
+                android:textColor="@color/text_gray"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:paddingHorizontal="24dp"
+                android:paddingTop="16dp"
+                android:paddingBottom="8dp" />
 
-    <androidx.core.widget.NestedScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:maxHeight="400dp"
-        android:scrollbars="vertical"
-        android:fillViewport="true">
-        
-        <LinearLayout
-            android:id="@+id/mcp_tools_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
-    </androidx.core.widget.NestedScrollView>
+            <LinearLayout
+                android:id="@+id/mcp_tools_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/divider_color"
-        android:layout_marginVertical="8dp" />
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/divider_color"
+                android:layout_marginVertical="8dp" />
 
-    <!-- Event Filters -->
-    <TextView
+            <!-- Event Filters -->
+            <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="EVENT FILTERS"
@@ -351,6 +356,9 @@
             android:layout_height="24dp"
             android:src="@drawable/chevron_right"
             app:tint="@color/text_gray" />
-    </LinearLayout>
+            </LinearLayout>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
 </LinearLayout>
