@@ -45,7 +45,7 @@ class ConfigManager private constructor(private val context: Context) {
         private const val KEY_SCREENSHOT_QUALITY = "screenshot_quality"
         
         // Vision API settings (固定配置,不允许修改)
-        const val VISION_API_URL = "http://api.xiaozhi.me/vision/explain"
+        const val VISION_API_URL = "https://api.xiaozhi.me/vision/explain"
         const val VISION_API_TOKEN = "test-token"
         
         // Vision custom prompt (可在配置界面优化)
