@@ -909,7 +909,7 @@
                             android:id="@+id/app_cards_empty"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="暂无 App Cards，点击"添加"创建第一个操作指南"
+                            android:text="暂无 App Cards，点击「添加」创建第一个操作指南"
                             android:textColor="@color/text_gray"
                             android:textSize="13sp"
                             android:gravity="center"
