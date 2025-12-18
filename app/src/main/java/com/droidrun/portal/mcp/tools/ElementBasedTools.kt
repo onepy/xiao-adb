@@ -19,6 +19,7 @@ object ElementFinder {
     
     /**
      * 根据resourceId查找控件
+     * 支持智能补全：自动尝试补全包名前缀
      * 注意: 调用者负责回收返回的节点
      */
     fun findByResourceId(resourceId: String): android.view.accessibility.AccessibilityNodeInfo? {
@@ -34,21 +35,46 @@ object ElementFinder {
             return null
         }
         
-        // 不要在finally中回收rootNode!
-        // 因为返回的节点可能依赖rootNode
-        val nodes = rootNode.findAccessibilityNodeInfosByViewId(resourceId)
-        if (nodes.isNotEmpty()) {
-            // 返回第一个匹配的节点
-            val result = nodes[0]
-            // 回收其他不需要的节点
-            for (i in 1 until nodes.size) {
-                nodes[i].recycle()
+        // 智能补全逻辑：尝试多种形式的 resourceId
+        val idsToTry = mutableListOf<String>()
+        
+        // 1. 使用原始 resourceId
+        idsToTry.add(resourceId)
+        
+        // 2. 如果不包含包名（没有冒号），尝试从当前应用包名补全
+        if (!resourceId.contains(":")) {
+            val currentPackage = service.rootInActiveWindow?.packageName?.toString()
+            if (!currentPackage.isNullOrEmpty()) {
+                // 尝试补全为: package:id/name
+                idsToTry.add("$currentPackage:id/$resourceId")
             }
-            Log.i(TAG, "Found element by resourceId: $resourceId, bounds: ${getNodeBounds(result)}")
-            return result
         }
         
-        // 没找到才回收rootNode
+        // 3. 如果只有短名称（没有 id/ 前缀），尝试补全
+        if (!resourceId.contains("/") && !resourceId.contains(":")) {
+            val currentPackage = service.rootInActiveWindow?.packageName?.toString()
+            if (!currentPackage.isNullOrEmpty()) {
+                idsToTry.add("$currentPackage:id/$resourceId")
+            }
+        }
+        
+        // 尝试每种形式
+        for (idToTry in idsToTry) {
+            val nodes = rootNode.findAccessibilityNodeInfosByViewId(idToTry)
+            if (nodes.isNotEmpty()) {
+                // 返回第一个匹配的节点
+                val result = nodes[0]
+                // 回收其他不需要的节点
+                for (i in 1 until nodes.size) {
+                    nodes[i].recycle()
+                }
+                Log.i(TAG, "Found element by resourceId: $idToTry (original: $resourceId), bounds: ${getNodeBounds(result)}")
+                return result
+            }
+        }
+        
+        // 都没找到才回收rootNode
+        Log.w(TAG, "Element not found with resourceId: $resourceId (tried: $idsToTry)")
         rootNode.recycle()
         return null
     }

@@ -72,7 +72,8 @@ object A11yTreeCleaner {
                 val className = focused.optString("className", "")
                 val resourceId = focused.optString("resourceId", "")
                 if (className.isNotEmpty()) focusInfo.put("class", className)
-                if (resourceId.isNotEmpty()) focusInfo.put("id", resourceId.substringAfterLast('/'))
+                // 保留完整的 resourceId，方便控件查找
+                if (resourceId.isNotEmpty()) focusInfo.put("id", resourceId)
                 if (focusInfo.length() > 0) put("focused", focusInfo)
             }
         }
@@ -136,9 +137,9 @@ object A11yTreeCleaner {
                 parts.add("")
             }
             
-            // 3. resourceId (去掉包名前缀)
+            // 3. resourceId (保留完整ID，包含包名和前缀)
             val resourceId = node.optString("resourceId", "")
-            parts.add(if (resourceId.isNotEmpty()) resourceId.substringAfterLast('/') else "")
+            parts.add(resourceId)
             
             // 4. 类型 (去掉包名前缀)
             val className = node.optString("className", "")
