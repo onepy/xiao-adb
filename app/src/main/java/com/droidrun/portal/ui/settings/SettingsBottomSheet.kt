@@ -161,9 +161,83 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         // Reverse Connection Settings
         val switchReverseEnabled = view.findViewById<SwitchMaterial>(R.id.switch_reverse_enabled)
         val inputReverseUrl = view.findViewById<TextInputEditText>(R.id.input_reverse_url)
+        val inputHeartbeatInterval = view.findViewById<TextInputEditText>(R.id.input_heartbeat_interval)
+        val inputHeartbeatTimeout = view.findViewById<TextInputEditText>(R.id.input_heartbeat_timeout)
+        val inputReconnectInterval = view.findViewById<TextInputEditText>(R.id.input_reconnect_interval)
 
         switchReverseEnabled.isChecked = configManager.reverseConnectionEnabled
         inputReverseUrl.setText(configManager.reverseConnectionUrl)
+        
+        // Setup heartbeat configuration inputs (in seconds for better UX)
+        inputHeartbeatInterval.setText((configManager.heartbeatInterval / 1000).toString())
+        inputHeartbeatTimeout.setText((configManager.heartbeatTimeout / 1000).toString())
+        inputReconnectInterval.setText((configManager.reconnectInterval / 1000).toString())
+        
+        // Heartbeat Interval
+        inputHeartbeatInterval.setOnEditorActionListener { v, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                val seconds = v.text.toString().toIntOrNull()
+                if (seconds != null && seconds in 5..300) {
+                    configManager.heartbeatInterval = seconds * 1000L
+                    inputHeartbeatInterval.clearFocus()
+                    Toast.makeText(requireContext(), "心跳间隔已设置为 ${seconds}秒", Toast.LENGTH_SHORT).show()
+                    
+                    // Restart service if enabled to apply new settings
+                    if (configManager.reverseConnectionEnabled) {
+                        restartReverseConnectionService()
+                    }
+                } else {
+                    inputHeartbeatInterval.error = "范围: 5-300秒"
+                }
+                true
+            } else {
+                false
+            }
+        }
+        
+        // Heartbeat Timeout
+        inputHeartbeatTimeout.setOnEditorActionListener { v, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                val seconds = v.text.toString().toIntOrNull()
+                if (seconds != null && seconds in 1..60) {
+                    configManager.heartbeatTimeout = seconds * 1000L
+                    inputHeartbeatTimeout.clearFocus()
+                    Toast.makeText(requireContext(), "心跳超时已设置为 ${seconds}秒", Toast.LENGTH_SHORT).show()
+                    
+                    // Restart service if enabled to apply new settings
+                    if (configManager.reverseConnectionEnabled) {
+                        restartReverseConnectionService()
+                    }
+                } else {
+                    inputHeartbeatTimeout.error = "范围: 1-60秒"
+                }
+                true
+            } else {
+                false
+            }
+        }
+        
+        // Reconnect Interval
+        inputReconnectInterval.setOnEditorActionListener { v, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                val seconds = v.text.toString().toIntOrNull()
+                if (seconds != null && seconds in 1..120) {
+                    configManager.reconnectInterval = seconds * 1000L
+                    inputReconnectInterval.clearFocus()
+                    Toast.makeText(requireContext(), "重连间隔已设置为 ${seconds}秒", Toast.LENGTH_SHORT).show()
+                    
+                    // Restart service if enabled to apply new settings
+                    if (configManager.reverseConnectionEnabled) {
+                        restartReverseConnectionService()
+                    }
+                } else {
+                    inputReconnectInterval.error = "范围: 1-120秒"
+                }
+                true
+            } else {
+                false
+            }
+        }
 
         // Toggle Service on Switch Change
         switchReverseEnabled.setOnCheckedChangeListener { _, isChecked ->
@@ -195,10 +269,7 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
                 
                 // If enabled, restart service to pick up new URL
                 if (configManager.reverseConnectionEnabled) {
-                    val intent = Intent(requireContext(), ReverseConnectionService::class.java)
-                    requireContext().stopService(intent)
-                    requireContext().startService(intent)
-                    Toast.makeText(requireContext(), "正在重启MCP连接服务...", Toast.LENGTH_SHORT).show()
+                    restartReverseConnectionService()
                 }
                 true
             } else {
@@ -424,6 +495,13 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         super.onDestroyView()
         // Unregister broadcast receiver
         LocalBroadcastManager.getInstance(requireContext()).unregisterReceiver(connectionStatusReceiver)
+    }
+    
+    private fun restartReverseConnectionService() {
+        val intent = Intent(requireContext(), ReverseConnectionService::class.java)
+        requireContext().stopService(intent)
+        requireContext().startService(intent)
+        Toast.makeText(requireContext(), "正在重启MCP连接服务...", Toast.LENGTH_SHORT).show()
     }
     
     companion object {
