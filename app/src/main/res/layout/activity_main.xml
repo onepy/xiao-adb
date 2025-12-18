@@ -845,6 +845,77 @@
                             android:fontFamily="monospace"
                             android:paddingStart="16dp" />
                     </LinearLayout>
+                    
+                    <!-- App Cards Collapsible Section -->
+                    <LinearLayout
+                        android:id="@+id/app_cards_header"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground"
+                        android:paddingVertical="8dp"
+                        android:layout_marginTop="16dp">
+                        
+                        <ImageView
+                            android:id="@+id/app_cards_arrow"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/chevron_right"
+                            app:tint="@color/text_white"
+                            android:rotation="0" />
+                            
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="App Cards"
+                            android:textColor="@color/text_white"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:gravity="center_vertical" />
+                            
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_add_app_card"
+                            android:layout_width="wrap_content"
+                            android:layout_height="32dp"
+                            android:text="添加"
+                            android:textSize="12sp"
+                            android:textColor="@color/text_white"
+                            app:backgroundTint="@color/status_success"
+                            app:cornerRadius="4dp"
+                            android:paddingHorizontal="12dp"
+                            style="@style/Widget.MaterialComponents.Button.UnelevatedButton" />
+                    </LinearLayout>
+                    
+                    <!-- App Cards Content (Collapsible) -->
+                    <LinearLayout
+                        android:id="@+id/app_cards_content"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone"
+                        android:layout_marginTop="8dp">
+                        
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/app_cards_recycler"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingBottom="8dp" />
+                            
+                        <TextView
+                            android:id="@+id/app_cards_empty"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="暂无 App Cards，点击"添加"创建第一个操作指南"
+                            android:textColor="@color/text_gray"
+                            android:textSize="13sp"
+                            android:gravity="center"
+                            android:padding="16dp"
+                            android:visibility="gone" />
+                    </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

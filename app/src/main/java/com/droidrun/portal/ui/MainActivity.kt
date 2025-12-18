@@ -33,6 +33,10 @@ import androidx.appcompat.app.AlertDialog
 import android.content.ClipboardManager
 import android.content.ComponentName
 import com.droidrun.portal.ui.settings.SettingsBottomSheet
+import com.droidrun.portal.appcard.AppCardManager
+import com.droidrun.portal.appcard.AppCardAdapter
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 
 class MainActivity : AppCompatActivity() {
     
@@ -68,6 +72,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var endpointsContent: View
     private lateinit var endpointsArrow: ImageView
     private var isEndpointsExpanded = false
+    
+    // App Cards section
+    private lateinit var appCardsHeader: View
+    private lateinit var appCardsContent: View
+    private lateinit var appCardsArrow: ImageView
+    private lateinit var appCardsRecycler: RecyclerView
+    private lateinit var appCardsEmpty: TextView
+    private lateinit var btnAddAppCard: MaterialButton
+    private var isAppCardsExpanded = false
+    private lateinit var appCardManager: AppCardManager
+    private lateinit var appCardAdapter: AppCardAdapter
     
     // Flag to prevent infinite update loops
     private var isProgrammaticUpdate = false
@@ -158,6 +173,9 @@ class MainActivity : AppCompatActivity() {
         
         // Configure endpoints collapsible section
         setupEndpointsCollapsible()
+        
+        // Configure App Cards section
+        setupAppCardsSection()
         
         fetchButton.setOnClickListener {
             fetchElementData()
@@ -746,6 +764,158 @@ class MainActivity : AppCompatActivity() {
                 endpointsArrow.rotation = 0f
             }
         }
+    }
+    
+    private fun setupAppCardsSection() {
+        // Initialize views
+        appCardsHeader = findViewById(R.id.app_cards_header)
+        appCardsContent = findViewById(R.id.app_cards_content)
+        appCardsArrow = findViewById(R.id.app_cards_arrow)
+        appCardsRecycler = findViewById(R.id.app_cards_recycler)
+        appCardsEmpty = findViewById(R.id.app_cards_empty)
+        btnAddAppCard = findViewById(R.id.btn_add_app_card)
+        
+        // Initialize manager
+        appCardManager = AppCardManager.getInstance(this)
+        
+        // Initialize default cards
+        appCardManager.initializeDefaultCards()
+        
+        // Setup RecyclerView
+        appCardAdapter = AppCardAdapter(
+            cards = emptyList(),
+            onEdit = { card ->
+                showAppCardEditDialog(card)
+            },
+            onDelete = { card ->
+                showDeleteConfirmDialog(card)
+            }
+        )
+        appCardsRecycler.apply {
+            layoutManager = LinearLayoutManager(this@MainActivity)
+            adapter = appCardAdapter
+        }
+        
+        // Setup header click
+        appCardsHeader.setOnClickListener {
+            isAppCardsExpanded = !isAppCardsExpanded
+            
+            if (isAppCardsExpanded) {
+                appCardsContent.visibility = View.VISIBLE
+                appCardsArrow.rotation = 90f
+                loadAppCards()
+            } else {
+                appCardsContent.visibility = View.GONE
+                appCardsArrow.rotation = 0f
+            }
+        }
+        
+        // Setup add button
+        btnAddAppCard.setOnClickListener {
+            showAppCardEditDialog(null)
+        }
+    }
+    
+    private fun loadAppCards() {
+        val cards = appCardManager.getAllAppCards()
+        
+        if (cards.isEmpty()) {
+            appCardsRecycler.visibility = View.GONE
+            appCardsEmpty.visibility = View.VISIBLE
+        } else {
+            appCardsRecycler.visibility = View.VISIBLE
+            appCardsEmpty.visibility = View.GONE
+            appCardAdapter.updateCards(cards)
+        }
+    }
+    
+    private fun showAppCardEditDialog(card: com.droidrun.portal.appcard.AppCard?) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_app_card_editor, null)
+        
+        val packageNameInput = dialogView.findViewById<TextInputEditText>(R.id.package_name_input)
+        val titleInput = dialogView.findViewById<TextInputEditText>(R.id.title_input)
+        val keywordsInput = dialogView.findViewById<TextInputEditText>(R.id.keywords_input)
+        val contentInput = dialogView.findViewById<TextInputEditText>(R.id.content_input)
+        
+        // 如果是编辑模式，填充现有数据
+        if (card != null) {
+            packageNameInput.setText(card.packageName)
+            titleInput.setText(card.title)
+            keywordsInput.setText(card.keywords.joinToString(", "))
+            contentInput.setText(card.content)
+        }
+        
+        AlertDialog.Builder(this)
+            .setTitle(if (card == null) "添加 App Card" else "编辑 App Card")
+            .setView(dialogView)
+            .setPositiveButton("保存") { dialog, _ ->
+                val packageName = packageNameInput.text.toString().trim()
+                val title = titleInput.text.toString().trim()
+                val keywordsText = keywordsInput.text.toString().trim()
+                val content = contentInput.text.toString().trim()
+                
+                // 验证输入
+                if (packageName.isEmpty() || title.isEmpty() || content.isEmpty()) {
+                    Toast.makeText(this, "包名、标题和内容不能为空", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                
+                // 解析关键词
+                val keywords = if (keywordsText.isEmpty()) {
+                    emptyList()
+                } else {
+                    keywordsText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                }
+                
+                // 保存或更新
+                val success = if (card == null) {
+                    // 新建
+                    appCardManager.createAppCard(packageName, title, keywords, content)
+                    true
+                } else {
+                    // 更新
+                    appCardManager.updateAppCard(
+                        cardId = card.id,
+                        title = title,
+                        keywords = keywords,
+                        content = content
+                    ) != null
+                }
+                
+                if (success) {
+                    Toast.makeText(this, "保存成功", Toast.LENGTH_SHORT).show()
+                    loadAppCards()
+                } else {
+                    Toast.makeText(this, "保存失败", Toast.LENGTH_SHORT).show()
+                }
+                
+                dialog.dismiss()
+            }
+            .setNegativeButton("取消") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .create()
+            .show()
+    }
+    
+    private fun showDeleteConfirmDialog(card: com.droidrun.portal.appcard.AppCard) {
+        AlertDialog.Builder(this)
+            .setTitle("删除 App Card")
+            .setMessage("确定要删除「${card.title}」吗？")
+            .setPositiveButton("删除") { dialog, _ ->
+                if (appCardManager.deleteAppCard(card.id)) {
+                    Toast.makeText(this, "已删除", Toast.LENGTH_SHORT).show()
+                    loadAppCards()
+                } else {
+                    Toast.makeText(this, "删除失败", Toast.LENGTH_SHORT).show()
+                }
+                dialog.dismiss()
+            }
+            .setNegativeButton("取消") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .create()
+            .show()
     }
 
     private fun setAppVersion() {

@@ -137,7 +137,7 @@ class ReverseConnectionService : Service() {
         tools["android.screen.dump"] = GetStateTool(apiHandler)
         tools["android.screen.vision"] = ScreenVisionTool(apiHandler)
         tools["android.packages.list"] = GetPackagesTool(apiHandler)
-        tools["android.launch_app"] = LaunchAppTool(apiHandler)
+        tools["android.launch_app"] = LaunchAppTool(apiHandler, this)
         tools["android.text.input"] = InputTextTool(apiHandler)
         tools["android.input.clear"] = ClearTextTool(apiHandler)
         tools["android.key.send"] = PressKeyTool(apiHandler)

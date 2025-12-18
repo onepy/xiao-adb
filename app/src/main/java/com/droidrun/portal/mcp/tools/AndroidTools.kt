@@ -7,6 +7,7 @@ import com.droidrun.portal.api.ApiHandler
 import com.droidrun.portal.api.ApiResponse
 import com.droidrun.portal.core.A11yTreeCleaner
 import com.droidrun.portal.mcp.McpTool
+import com.droidrun.portal.appcard.AppCardManager
 import org.json.JSONObject
 
 /**
@@ -206,7 +207,10 @@ class GetPackagesTool(private val apiHandler: ApiHandler) : McpToolHandler {
 }
 
 // 3. LaunchAppTool - 启动应用
-class LaunchAppTool(private val apiHandler: ApiHandler) : McpToolHandler {
+class LaunchAppTool(
+    private val apiHandler: ApiHandler,
+    private val context: Context
+) : McpToolHandler {
     
     companion object {
         private const val TAG = "LaunchAppTool"
@@ -223,6 +227,10 @@ class LaunchAppTool(private val apiHandler: ApiHandler) : McpToolHandler {
                         put("type", "string")
                         put("description", "Optional: Specific activity to launch")
                     })
+                    put("keyword", JSONObject().apply {
+                        put("type", "string")
+                        put("description", "Optional: 关键词，用于匹配相关的操作指南（App Card）")
+                    })
                 })
                 put("required", org.json.JSONArray().put("package"))
             }
@@ -230,19 +238,30 @@ class LaunchAppTool(private val apiHandler: ApiHandler) : McpToolHandler {
             return McpTool(
                 name = "android.launch_app",
                 description = """
-                    启动指定的 Android 应用。
+                    启动指定的 Android 应用，并可选择性地附带操作指南。
                     此工具允许通过应用的包名启动应用，也可以选择指定一个特定的 Activity。
                     
                     **何时使用:**
                     - 需要打开某个应用时。
                     - 需要从当前应用切换到另一个应用时。
+                    - 需要执行特定应用内操作时（通过关键词获取操作指南）。
                     
                     **参数:**
-                    - `package` (string, 必需): 要启动应用的包名 (例如: `com.android.settings`, `com.taobao.taobao`)。
+                    - `package` (string, 必需): 要启动应用的包名 (例如: `com.android.settings`, `com.sankuai.meituan`)。
                     - `activity` (string, 可选): 要启动的特定 Activity 的完整类名 (例如: `com.android.settings.Settings`)。如果未提供，将启动应用的默认 Activity。
+                    - `keyword` (string, 可选): 操作关键词，用于匹配相关的操作指南。例如：
+                      - "外卖订单" - 查看美团外卖订单
+                      - "支付" - 支付相关操作
+                      - "搜索" - 搜索功能
                     
                     **如何使用:**
-                    调用此工具并提供 `package` 参数。如果需要启动应用的特定界面，可以同时提供 `activity` 参数。
+                    1. 基本启动：只提供 `package` 参数
+                    2. 启动特定界面：提供 `package` 和 `activity` 参数
+                    3. 获取操作指南：提供 `package` 和 `keyword` 参数，系统会返回匹配的操作指南
+                    
+                    **App Cards (操作指南):**
+                    当提供 `keyword` 参数时，系统会搜索该应用的相关操作指南（App Cards），
+                    并在响应中返回最佳匹配的指南内容，帮助 AI 了解如何在应用中执行特定操作。
                 """.trimIndent(),
                 inputSchema = inputSchema
             )
@@ -254,16 +273,41 @@ class LaunchAppTool(private val apiHandler: ApiHandler) : McpToolHandler {
             val packageName = arguments?.getString("package")
                 ?: throw IllegalArgumentException("Missing package parameter")
             val activity = arguments.optString("activity", null)
+            val keyword = arguments.optString("keyword", "")
             
-            Log.i(TAG, "Launching app: $packageName, activity: $activity")
+            Log.i(TAG, "Launching app: $packageName, activity: $activity, keyword: $keyword")
+            
+            // 仅在提供关键词时搜索匹配的 App Cards
+            val appCardManager = AppCardManager.getInstance(context)
+            val matchedCards = if (keyword.isNotBlank()) {
+                appCardManager.searchAppCards(packageName, keyword)
+            } else {
+                emptyList()  // 无关键词时不返回任何卡片
+            }
             
             when (val response = apiHandler.startApp(packageName, activity)) {
                 is ApiResponse.Success -> {
-                    JSONObject().apply {
+                    val result = JSONObject().apply {
                         put("success", true)
                         put("message", response.data)
+                        
+                        // 如果找到匹配的 App Cards，添加到响应中
+                        if (matchedCards.isNotEmpty()) {
+                            val cardsArray = org.json.JSONArray()
+                            matchedCards.take(3).forEach { card ->  // 最多返回3个最匹配的
+                                cardsArray.put(JSONObject().apply {
+                                    put("title", card.title)
+                                    put("content", card.content)
+                                    put("keywords", org.json.JSONArray(card.keywords))
+                                })
+                            }
+                            put("app_cards", cardsArray)
+                            put("guide", "已找到 ${matchedCards.size} 个相关操作指南，已附带最佳匹配的指南内容")
+                        }
+                        
                         put("next_action", "请立即调用 android.screen.dump 工具确认应用是否成功启动并显示正确界面")
                     }
+                    result
                 }
                 is ApiResponse.Error -> {
                     val isNetworkError = response.message.contains("network", ignoreCase = true) ||
