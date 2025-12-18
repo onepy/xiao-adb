@@ -59,11 +59,13 @@ class DroidrunContentProvider : ContentProvider() {
         
         val service = DroidrunAccessibilityService.getInstance()
         if (service != null && context != null) {
+            val configManager = com.droidrun.portal.config.ConfigManager.getInstance(context!!)
             apiHandler = ApiHandler(
                 stateRepo = StateRepository(service),
                 getKeyboardIME = { DroidrunKeyboardIME.getInstance() },
                 getPackageManager = { context!!.packageManager },
-                appVersionProvider = { 
+                configManager = configManager,
+                appVersionProvider = {
                     try {
                         context!!.packageManager.getPackageInfo(context!!.packageName, 0).versionName
                     } catch (e: Exception) { "unknown" }

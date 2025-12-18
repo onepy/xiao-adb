@@ -70,6 +70,7 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         val switchWsEnabled = view.findViewById<SwitchMaterial>(R.id.switch_ws_enabled)
         val inputWsPort = view.findViewById<TextInputEditText>(R.id.input_ws_port)
         val inputScreenshotQuality = view.findViewById<TextInputEditText>(R.id.input_screenshot_quality)
+        val inputVisionPrompt = view.findViewById<TextInputEditText>(R.id.input_vision_prompt)
 
         switchWsEnabled.isChecked = configManager.websocketEnabled
         
@@ -100,6 +101,43 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
                 false
             }
         }
+        
+        // Setup vision prompt input
+        inputVisionPrompt.setText(configManager.visionCustomPrompt)
+        inputVisionPrompt.setOnEditorActionListener { v, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                val prompt = v.text.toString().trim()
+                if (prompt.isBlank()) {
+                    // 如果输入为空，恢复为默认值
+                    val defaultPrompt = ConfigManager.getInstance(requireContext()).visionCustomPrompt
+                    inputVisionPrompt.setText(defaultPrompt)
+                    configManager.visionCustomPrompt = defaultPrompt
+                    Toast.makeText(requireContext(), "输入不能为空，已恢复默认值", Toast.LENGTH_SHORT).show()
+                } else {
+                    configManager.visionCustomPrompt = prompt
+                    Toast.makeText(requireContext(), "Vision提示词已更新", Toast.LENGTH_SHORT).show()
+                }
+                inputVisionPrompt.clearFocus()
+                true
+            } else {
+                false
+            }
+        }
+        
+        // 添加失去焦点时的验证
+        inputVisionPrompt.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                val prompt = inputVisionPrompt.text.toString().trim()
+                if (prompt.isBlank()) {
+                    // 如果失去焦点时输入为空，恢复为当前配置值
+                    inputVisionPrompt.setText(configManager.visionCustomPrompt)
+                } else if (prompt != configManager.visionCustomPrompt) {
+                    // 自动保存修改
+                    configManager.visionCustomPrompt = prompt
+                }
+            }
+        }
+        
         switchWsEnabled.setOnCheckedChangeListener { _, isChecked ->
             configManager.setWebSocketEnabledWithNotification(isChecked)
         }

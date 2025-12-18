@@ -141,6 +141,28 @@
         </com.google.android.material.textfield.TextInputLayout>
     </LinearLayout>
 
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="24dp"
+        android:paddingBottom="12dp"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        app:boxStrokeColor="@color/text_gray"
+        app:hintTextColor="@color/text_gray"
+        android:hint="Vision AI 自定义提示词">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/input_vision_prompt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textMultiLine"
+            android:textColor="@color/text_white"
+            android:minLines="3"
+            android:maxLines="6"
+            android:gravity="top|start"
+            android:scrollbars="vertical" />
+    </com.google.android.material.textfield.TextInputLayout>
+
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"

@@ -85,7 +85,8 @@ class DroidrunAccessibilityService : AccessibilityService(), ConfigManager.Confi
             stateRepo = stateRepo,
             getKeyboardIME = { DroidrunKeyboardIME.getInstance() },
             getPackageManager = { packageManager },
-            appVersionProvider = { 
+            configManager = configManager,
+            appVersionProvider = {
                  try {
                      packageManager.getPackageInfo(packageName, 0).versionName
                  } catch (e: Exception) { "unknown" }
