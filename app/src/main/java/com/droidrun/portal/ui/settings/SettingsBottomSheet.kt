@@ -205,6 +205,12 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
                 toolDefinition = com.droidrun.portal.mcp.tools.GetStateTool.getToolDefinition()
             ),
             ToolInfo(
+                name = "android.screen.vision",
+                displayName = "Screen Vision",
+                description = "AI视觉分析屏幕内容",
+                toolDefinition = com.droidrun.portal.mcp.tools.ScreenVisionTool.getToolDefinition()
+            ),
+            ToolInfo(
                 name = "android.packages.list",
                 displayName = "Packages List",
                 description = "获取已安装应用列表",

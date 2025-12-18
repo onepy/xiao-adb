@@ -44,6 +44,19 @@ class ConfigManager private constructor(private val context: Context) {
         // Screenshot settings
         private const val KEY_SCREENSHOT_QUALITY = "screenshot_quality"
         
+        // Vision API settings (固定配置,不允许修改)
+        const val VISION_API_URL = "http://api.xiaozhi.me/vision/explain"
+        const val VISION_API_TOKEN = "test-token"
+        
+        // Vision custom prompt (可在配置界面优化)
+        private const val KEY_VISION_CUSTOM_PROMPT = "vision_custom_prompt"
+        private const val DEFAULT_VISION_CUSTOM_PROMPT = """【分析要求】
+1. 请详细描述屏幕上显示的内容，包括文字、图标、按钮等
+2. 如果询问某个元素的位置，请以坐标形式返回 (x, y)
+3. 坐标原点在屏幕左上角，x向右增加，y向下增加
+4. 返回格式要规范，便于程序解析
+5. 参考提供的XML数据来定位可交互元素"""
+        
         // Default heartbeat settings (in milliseconds)
         private const val DEFAULT_HEARTBEAT_INTERVAL = 30000L  // 30 seconds
         private const val DEFAULT_HEARTBEAT_TIMEOUT = 10000L   // 10 seconds
@@ -186,6 +199,38 @@ class ConfigManager private constructor(private val context: Context) {
         set(value) {
             sharedPrefs.edit { putInt(KEY_SCREENSHOT_QUALITY, value.coerceIn(1, 100)) }
         }
+    
+    // Vision自定义提示词 (可在配置界面修改)
+    var visionCustomPrompt: String
+        get() = sharedPrefs.getString(KEY_VISION_CUSTOM_PROMPT, DEFAULT_VISION_CUSTOM_PROMPT)
+            ?: DEFAULT_VISION_CUSTOM_PROMPT
+        set(value) {
+            sharedPrefs.edit { putString(KEY_VISION_CUSTOM_PROMPT, value) }
+        }
+    
+    // 生成完整的Vision API问题 - 组合所有部分
+    fun buildVisionQuestion(userQuestion: String, xmlData: String): String {
+        val displayMetrics = context.resources.displayMetrics
+        
+        return buildString {
+            // 1. 用户问题
+            append(userQuestion)
+            append("\n\n")
+            
+            // 2. 设备默认信息
+            append("【设备信息】\n")
+            append("- 屏幕尺寸: ${displayMetrics.widthPixels}x${displayMetrics.heightPixels}像素\n")
+            append("- DPI: ${displayMetrics.densityDpi}\n\n")
+            
+            // 3. 可配置的提示词
+            append(visionCustomPrompt)
+            append("\n\n")
+            
+            // 4. XML数据
+            append("【屏幕元素XML数据】\n")
+            append(xmlData)
+        }
+    }
 
     // Dynamic Event Toggles
     fun isEventEnabled(type: EventType): Boolean {

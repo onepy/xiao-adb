@@ -8,17 +8,36 @@ import android.util.Log
 import com.droidrun.portal.input.DroidrunKeyboardIME
 import com.droidrun.portal.core.JsonBuilders
 import com.droidrun.portal.core.StateRepository
+import com.droidrun.portal.core.A11yTreeCleaner
 import com.droidrun.portal.service.GestureController
 import com.droidrun.portal.service.DroidrunAccessibilityService
+import com.droidrun.portal.config.ConfigManager
 import org.json.JSONArray
 import org.json.JSONObject
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 class ApiHandler(
     private val stateRepo: StateRepository,
     private val getKeyboardIME: () -> DroidrunKeyboardIME?,
     private val getPackageManager: () -> PackageManager,
-    private val appVersionProvider: () -> String
+    private val appVersionProvider: () -> String,
+    private val configManager: ConfigManager
 ) {
+    
+    companion object {
+        private const val TAG = "ApiHandler"
+    }
+    
+    // OkHttpClient for vision API calls
+    private val httpClient = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
     // Queries
     fun ping() = ApiResponse.Success("pong")
 
@@ -319,6 +338,103 @@ class ApiHandler(
         } catch (e: Exception) {
             Log.e("ApiHandler", "Error starting app", e)
             ApiResponse.Error("Error starting app: ${e.message}")
+        }
+    }
+    
+    /**
+     * 调用Vision API分析屏幕截图
+     * @param userQuestion 用户提出的问题
+     * @return ApiResponse 包含AI分析结果
+     */
+    fun analyzeScreenWithVision(userQuestion: String): ApiResponse {
+        return try {
+            // 1. 获取截图
+            Log.i(TAG, "Getting screenshot for vision analysis...")
+            val screenshotFuture = stateRepo.takeScreenshot(hideOverlay = true)
+            val screenshotResult = screenshotFuture.get(5, TimeUnit.SECONDS)
+            
+            if (screenshotResult.startsWith("error:")) {
+                return ApiResponse.Error("Failed to get screenshot: ${screenshotResult.substring(7)}")
+            }
+            
+            // 解码Base64截图数据
+            val screenshotBytes = android.util.Base64.decode(screenshotResult, android.util.Base64.DEFAULT)
+            
+            // 2. 获取精简的XML数据
+            Log.i(TAG, "Getting cleaned XML data...")
+            val stateResponse = getStateFull(filter = true)
+            val cleanedXmlData = when (stateResponse) {
+                is ApiResponse.Success -> {
+                    val stateData = stateResponse.data as String
+                    // 使用A11yTreeCleaner精简数据
+                    A11yTreeCleaner.cleanA11yTree(stateData)
+                }
+                else -> "{}" // 如果获取失败,使用空对象
+            }
+            
+            // 3. 构建完整问题
+            val fullQuestion = configManager.buildVisionQuestion(userQuestion, cleanedXmlData)
+            Log.i(TAG, "Built full question, length: ${fullQuestion.length}")
+            
+            // 4. 调用Vision API
+            Log.i(TAG, "Calling vision API at ${ConfigManager.VISION_API_URL}...")
+            val response = callVisionApi(screenshotBytes, fullQuestion)
+            
+            response
+            
+        } catch (e: java.util.concurrent.TimeoutException) {
+            Log.e(TAG, "Vision analysis timeout", e)
+            ApiResponse.Error("Vision analysis timeout - operation took too long")
+        } catch (e: Exception) {
+            Log.e(TAG, "Vision analysis error", e)
+            ApiResponse.Error("Vision analysis failed: ${e.message}")
+        }
+    }
+    
+    /**
+     * 调用Vision API
+     */
+    private fun callVisionApi(imageBytes: ByteArray, question: String): ApiResponse {
+        return try {
+            // 构建multipart请求
+            val requestBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart(
+                    "file",
+                    "screenshot.jpg",
+                    imageBytes.toRequestBody("image/jpeg".toMediaType())
+                )
+                .addFormDataPart("question", question)
+                .build()
+            
+            val request = Request.Builder()
+                .url(ConfigManager.VISION_API_URL)
+                .addHeader("Authorization", "Bearer ${ConfigManager.VISION_API_TOKEN}")
+                .post(requestBody)
+                .build()
+            
+            // 同步调用
+            val response = httpClient.newCall(request).execute()
+            
+            if (!response.isSuccessful) {
+                return ApiResponse.Error("Vision API error: HTTP ${response.code} - ${response.message}")
+            }
+            
+            val responseBody = response.body?.string()
+            if (responseBody.isNullOrEmpty()) {
+                return ApiResponse.Error("Vision API returned empty response")
+            }
+            
+            // 解析JSON响应
+            val jsonResponse = JSONObject(responseBody)
+            ApiResponse.Raw(jsonResponse)
+            
+        } catch (e: IOException) {
+            Log.e(TAG, "Vision API network error", e)
+            ApiResponse.Error("Network error: ${e.message}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Vision API error", e)
+            ApiResponse.Error("Vision API error: ${e.message}")
         }
     }
 }

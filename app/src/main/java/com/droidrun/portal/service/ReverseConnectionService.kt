@@ -94,7 +94,8 @@ class ReverseConnectionService : Service() {
                 stateRepo = stateRepo,
                 getKeyboardIME = { DroidrunKeyboardIME.getInstance() },
                 getPackageManager = { packageManager },
-                appVersionProvider = { "1.0.0" }
+                appVersionProvider = { "1.0.0" },
+                configManager = configManager
             )
             
             // Register all tools
@@ -134,6 +135,7 @@ class ReverseConnectionService : Service() {
         
         // Android operation tools (无障碍服务 - 基于坐标)
         tools["android.screen.dump"] = GetStateTool(apiHandler)
+        tools["android.screen.vision"] = ScreenVisionTool(apiHandler)
         tools["android.packages.list"] = GetPackagesTool(apiHandler)
         tools["android.launch_app"] = LaunchAppTool(apiHandler)
         tools["android.text.input"] = InputTextTool(apiHandler)
@@ -345,6 +347,7 @@ class ReverseConnectionService : Service() {
         val toolDefinitions = mutableMapOf(
             "calculator" to CalculatorTool.getToolDefinition(),
             "android.screen.dump" to GetStateTool.getToolDefinition(),
+            "android.screen.vision" to ScreenVisionTool.getToolDefinition(),
             "android.packages.list" to GetPackagesTool.getToolDefinition(),
             "android.launch_app" to LaunchAppTool.getToolDefinition(),
             "android.text.input" to InputTextTool.getToolDefinition(),

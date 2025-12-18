@@ -1193,3 +1193,109 @@ class WaitTool(private val apiHandler: ApiHandler) : McpToolHandler {
         return false
     }
 }
+
+// 12. ScreenVisionTool - 屏幕视觉分析工具
+class ScreenVisionTool(private val apiHandler: ApiHandler) : McpToolHandler {
+    
+    companion object {
+        private const val TAG = "ScreenVisionTool"
+        
+        fun getToolDefinition(): McpTool {
+            val inputSchema = JSONObject().apply {
+                put("type", "object")
+                put("properties", JSONObject().apply {
+                    put("question", JSONObject().apply {
+                        put("type", "string")
+                        put("description", "向AI提出的问题，描述你希望了解的屏幕内容")
+                    })
+                })
+                put("required", org.json.JSONArray().put("question"))
+            }
+            
+            return McpTool(
+                name = "android.screen.vision",
+                description = """
+                    使用AI视觉识别分析当前屏幕内容。
+                    此工具会获取屏幕截图并发送给AI识别服务进行分析，可以识别屏幕上的图像、广告、弹窗等视觉内容。
+                    
+                    **何时使用:**
+                    - 需要了解屏幕上显示的图像、图标、广告等视觉内容时
+                    - 需要识别无法通过XML结构获取的内容（如图片中的文字）时
+                    - 需要判断是否出现了特定的弹窗或广告时
+                    - 需要AI帮助定位屏幕上某个视觉元素的位置时
+                    
+                    **与android.screen.dump的区别:**
+                    - `android.screen.dump`: 快速获取可交互元素的XML结构数据，速度快，但只能看到元素属性
+                    - `android.screen.vision`: 通过AI识别屏幕截图内容，速度较慢，但可以识别图像、广告等视觉内容
+                    
+                    **使用建议:**
+                    1. 对于普通的点击、输入等操作，优先使用`android.screen.dump`
+                    2. 当需要识别图像内容或判断弹窗时，使用本工具
+                    3. 本工具会自动附带设备信息和XML数据帮助AI分析
+                    
+                    **参数:**
+                    - `question` (string, 必需): 向AI提出的问题
+                      示例:
+                      - "屏幕上显示了什么内容？"
+                      - "是否出现了广告弹窗？"
+                      - "登录按钮在哪个位置？"
+                      - "屏幕中间的图片显示的是什么？"
+                    
+                    **注意事项:**
+                    - 此工具需要网络连接到AI识别服务
+                    - 处理时间较长（通常需要几秒钟）
+                    - AI会根据截图和XML数据提供分析结果
+                """.trimIndent(),
+                inputSchema = inputSchema
+            )
+        }
+    }
+    
+    override fun execute(arguments: JSONObject?): JSONObject {
+        return try {
+            val question = arguments?.getString("question")
+                ?: throw IllegalArgumentException("Missing question parameter")
+            
+            Log.i(TAG, "Analyzing screen with vision AI, question: $question")
+            
+            when (val response = apiHandler.analyzeScreenWithVision(question)) {
+                is ApiResponse.Raw -> {
+                    // Vision API返回的JSON响应
+                    JSONObject().apply {
+                        put("success", true)
+                        put("analysis", response.json)
+                        put("message", "Screen analyzed successfully by AI")
+                    }
+                }
+                is ApiResponse.Error -> {
+                    val isNetworkError = response.message.contains("network", ignoreCase = true) ||
+                                        response.message.contains("timeout", ignoreCase = true) ||
+                                        response.message.contains("connection", ignoreCase = true)
+                    
+                    JSONObject().apply {
+                        put("success", false)
+                        put("error", response.message)
+                        if (isNetworkError) {
+                            put("next_action", "网络错误，请检查网络连接后重试")
+                        } else {
+                            put("next_action", "AI分析失败，可以尝试重新提问或使用android.screen.dump工具获取元素信息")
+                        }
+                    }
+                }
+                else -> {
+                    JSONObject().apply {
+                        put("success", false)
+                        put("error", "Unexpected response type from vision API")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error analyzing screen with vision", e)
+            JSONObject().apply {
+                put("success", false)
+                put("error", e.message ?: "Unknown error")
+                put("next_action", "执行失败，建议使用android.screen.dump工具获取元素信息")
+            }
+        }
+    }
+}
