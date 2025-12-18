@@ -163,7 +163,6 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         val inputReverseUrl = view.findViewById<TextInputEditText>(R.id.input_reverse_url)
         val inputHeartbeatInterval = view.findViewById<TextInputEditText>(R.id.input_heartbeat_interval)
         val inputHeartbeatTimeout = view.findViewById<TextInputEditText>(R.id.input_heartbeat_timeout)
-        val inputReconnectInterval = view.findViewById<TextInputEditText>(R.id.input_reconnect_interval)
 
         switchReverseEnabled.isChecked = configManager.reverseConnectionEnabled
         inputReverseUrl.setText(configManager.reverseConnectionUrl)
@@ -171,7 +170,6 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         // Setup heartbeat configuration inputs (in seconds for better UX)
         inputHeartbeatInterval.setText((configManager.heartbeatInterval / 1000).toString())
         inputHeartbeatTimeout.setText((configManager.heartbeatTimeout / 1000).toString())
-        inputReconnectInterval.setText((configManager.reconnectInterval / 1000).toString())
         
         // Heartbeat Interval
         inputHeartbeatInterval.setOnEditorActionListener { v, actionId, _ ->
@@ -204,23 +202,6 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         inputHeartbeatTimeout.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
                 saveHeartbeatTimeout(inputHeartbeatTimeout)
-            }
-        }
-        
-        // Reconnect Interval
-        inputReconnectInterval.setOnEditorActionListener { v, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_DONE) {
-                saveReconnectInterval(inputReconnectInterval)
-                inputReconnectInterval.clearFocus()
-                true
-            } else {
-                false
-            }
-        }
-        
-        inputReconnectInterval.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) {
-                saveReconnectInterval(inputReconnectInterval)
             }
         }
 
@@ -526,27 +507,6 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         }
     }
     
-    private fun saveReconnectInterval(input: TextInputEditText) {
-        val seconds = input.text.toString().toIntOrNull()
-        if (seconds != null && seconds in 1..120) {
-            val oldValue = configManager.reconnectInterval
-            val newValue = seconds * 1000L
-            if (oldValue != newValue) {
-                configManager.reconnectInterval = newValue
-                
-                // Restart service if enabled to apply new settings
-                if (configManager.reverseConnectionEnabled) {
-                    restartReverseConnectionService()
-                }
-            }
-        } else {
-            // 恢复为当前配置值
-            input.setText((configManager.reconnectInterval / 1000).toString())
-            if (seconds != null) {
-                input.error = "范围: 1-120秒"
-            }
-        }
-    }
     
     private fun restartReverseConnectionService() {
         val intent = Intent(requireContext(), ReverseConnectionService::class.java)

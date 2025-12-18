@@ -34,7 +34,6 @@ class ConfigManager private constructor(private val context: Context) {
         // WebSocket Heartbeat Configuration
         private const val KEY_HEARTBEAT_INTERVAL = "heartbeat_interval"
         private const val KEY_HEARTBEAT_TIMEOUT = "heartbeat_timeout"
-        private const val KEY_RECONNECT_INTERVAL = "reconnect_interval"
         
         private const val DEFAULT_OFFSET = 0
         private const val DEFAULT_SOCKET_PORT = 8080
@@ -60,7 +59,6 @@ class ConfigManager private constructor(private val context: Context) {
         // Default heartbeat settings (in milliseconds)
         private const val DEFAULT_HEARTBEAT_INTERVAL = 30000L  // 30 seconds
         private const val DEFAULT_HEARTBEAT_TIMEOUT = 10000L   // 10 seconds
-        private const val DEFAULT_RECONNECT_INTERVAL = 5000L   // 5 seconds
         
         @Volatile
         private var INSTANCE: ConfigManager? = null
@@ -187,11 +185,6 @@ class ConfigManager private constructor(private val context: Context) {
             sharedPrefs.edit { putLong(KEY_HEARTBEAT_TIMEOUT, value) }
         }
     
-    var reconnectInterval: Long
-        get() = sharedPrefs.getLong(KEY_RECONNECT_INTERVAL, DEFAULT_RECONNECT_INTERVAL)
-        set(value) {
-            sharedPrefs.edit { putLong(KEY_RECONNECT_INTERVAL, value) }
-        }
     
     // Screenshot quality (1-100)
     var screenshotQuality: Int

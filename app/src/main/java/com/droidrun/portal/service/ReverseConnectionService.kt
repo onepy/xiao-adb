@@ -35,8 +35,10 @@ class ReverseConnectionService : Service() {
         private const val TAG = "ReverseConnectionService"
         private const val NOTIFICATION_ID = 2
         private const val CHANNEL_ID = "reverse_connection_channel"
-        private const val INITIAL_BACKOFF = 1000L // 1 second
-        private const val MAX_BACKOFF = 60000L // 1 minute
+        
+        // Reconnection settings - matching test_mcp.py
+        private const val INITIAL_BACKOFF = 1000L // 1 second (same as Python: INITIAL_BACKOFF = 1)
+        private const val MAX_BACKOFF = 600000L // 600 seconds (same as Python: MAX_BACKOFF = 600)
         
         // Broadcast actions
         const val ACTION_CONNECTION_STATUS = "com.droidrun.portal.MCP_CONNECTION_STATUS"
@@ -58,7 +60,7 @@ class ReverseConnectionService : Service() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var reconnectAttempt = 0
     private var currentBackoff = INITIAL_BACKOFF
-    private var isFirstConnection = true // 标记是否首次连接
+    private var shouldReconnect = true // Control reconnection loop
     
     // MCP State
     private var isInitialized = false
@@ -124,6 +126,7 @@ class ReverseConnectionService : Service() {
         super.onDestroy()
         Log.i(TAG, "Service destroyed")
         
+        shouldReconnect = false // Stop reconnection loop
         webSocket?.close(1000, "Service destroyed")
         mainHandler.removeCallbacksAndMessages(null)
         broadcastStatus(STATUS_DISCONNECTED, "服务已停止")
@@ -170,8 +173,9 @@ class ReverseConnectionService : Service() {
             return
         }
         
-        Log.i(TAG, "Connecting to $url (attempt ${reconnectAttempt + 1})")
-        updateNotification("正在连接... (尝试 ${reconnectAttempt + 1})")
+        reconnectAttempt++
+        Log.i(TAG, "Connecting to $url (attempt #$reconnectAttempt)")
+        updateNotification("正在连接... (尝试 #$reconnectAttempt)")
         broadcastStatus(STATUS_CONNECTING, "正在连接到服务器...")
         
         val request = Request.Builder()
@@ -180,16 +184,11 @@ class ReverseConnectionService : Service() {
         
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
-                Log.i(TAG, "WebSocket connected successfully")
+                Log.i(TAG, "✓ WebSocket connected successfully after $reconnectAttempt attempts")
                 reconnectAttempt = 0
                 currentBackoff = INITIAL_BACKOFF
                 updateNotification("已连接,等待初始化")
-                
-                // 只在首次连接时发送广播提示
-                if (isFirstConnection) {
-                    broadcastStatus(STATUS_CONNECTED, "已连接,等待客户端初始化...")
-                    isFirstConnection = false
-                }
+                broadcastStatus(STATUS_CONNECTED, "已连接,等待客户端初始化...")
                 
                 // In reverse connection, Android is the SERVER
                 // We wait for initialize request from remote client
@@ -210,14 +209,14 @@ class ReverseConnectionService : Service() {
             }
             
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                Log.i(TAG, "WebSocket closed: $code - $reason")
+                Log.i(TAG, "✗ WebSocket closed: $code - $reason")
                 isInitialized = false
                 broadcastStatus(STATUS_DISCONNECTED, "连接已关闭")
                 scheduleReconnect()
             }
             
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                Log.e(TAG, "WebSocket error", t)
+                Log.e(TAG, "✗ WebSocket connection failed: ${t.message}", t)
                 isInitialized = false
                 val errorMsg = t.message ?: "未知错误"
                 updateNotification("连接失败: $errorMsg")
@@ -228,18 +227,25 @@ class ReverseConnectionService : Service() {
     }
     
     private fun scheduleReconnect() {
-        reconnectAttempt++
-        // Use configured reconnect interval instead of exponential backoff
-        val reconnectDelay = configManager.reconnectInterval
+        if (!shouldReconnect || !configManager.reverseConnectionEnabled) {
+            Log.i(TAG, "Reconnection disabled, stopping service")
+            return
+        }
         
-        Log.i(TAG, "Scheduling reconnect in ${reconnectDelay}ms (attempt $reconnectAttempt)")
-        updateNotification("等待重连... (${reconnectDelay/1000}秒)")
+        // Exponential backoff algorithm - matching test_mcp.py:
+        // backoff = min(backoff * 2, MAX_BACKOFF)
+        currentBackoff = minOf(currentBackoff * 2, MAX_BACKOFF)
+        
+        val delaySeconds = currentBackoff / 1000
+        Log.i(TAG, "⏳ Scheduling reconnect in ${delaySeconds}s (attempt #$reconnectAttempt, backoff: ${delaySeconds}s)")
+        updateNotification("等待重连... (${delaySeconds}秒后重试)")
         
         mainHandler.postDelayed({
-            if (configManager.reverseConnectionEnabled) {
+            if (shouldReconnect && configManager.reverseConnectionEnabled) {
+                Log.i(TAG, "↻ Attempting reconnection...")
                 connectToServer()
             }
-        }, reconnectDelay)
+        }, currentBackoff)
     }
     
     private fun handleMessage(text: String) {
@@ -277,16 +283,9 @@ class ReverseConnectionService : Service() {
                 val response = createInitializeResponse(id)
                 sendMessage(response.toJson().toString())
                 isInitialized = true
-                Log.i(TAG, "MCP initialized with ${tools.size} tools")
+                Log.i(TAG, "✓ MCP initialized with ${tools.size} tools")
                 updateNotification("已初始化 (${tools.size}个工具)")
-                
-                // 只在首次初始化时发送广播提示
-                if (!isFirstConnection) {
-                    // 如果不是首次连接(即重连),不显示Toast
-                    Log.i(TAG, "Reconnected and initialized silently")
-                } else {
-                    broadcastStatus(STATUS_CONNECTED, "已成功初始化 (${tools.size}个工具可用)")
-                }
+                broadcastStatus(STATUS_CONNECTED, "已成功初始化 (${tools.size}个工具可用)")
                 
                 // Process pending requests after initialization
                 processPendingRequests()
