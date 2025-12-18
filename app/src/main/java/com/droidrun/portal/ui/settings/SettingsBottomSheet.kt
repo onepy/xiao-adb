@@ -176,66 +176,51 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         // Heartbeat Interval
         inputHeartbeatInterval.setOnEditorActionListener { v, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
-                val seconds = v.text.toString().toIntOrNull()
-                if (seconds != null && seconds in 5..300) {
-                    configManager.heartbeatInterval = seconds * 1000L
-                    inputHeartbeatInterval.clearFocus()
-                    Toast.makeText(requireContext(), "心跳间隔已设置为 ${seconds}秒", Toast.LENGTH_SHORT).show()
-                    
-                    // Restart service if enabled to apply new settings
-                    if (configManager.reverseConnectionEnabled) {
-                        restartReverseConnectionService()
-                    }
-                } else {
-                    inputHeartbeatInterval.error = "范围: 5-300秒"
-                }
+                saveHeartbeatInterval(inputHeartbeatInterval)
+                inputHeartbeatInterval.clearFocus()
                 true
             } else {
                 false
+            }
+        }
+        
+        inputHeartbeatInterval.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                saveHeartbeatInterval(inputHeartbeatInterval)
             }
         }
         
         // Heartbeat Timeout
         inputHeartbeatTimeout.setOnEditorActionListener { v, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
-                val seconds = v.text.toString().toIntOrNull()
-                if (seconds != null && seconds in 1..60) {
-                    configManager.heartbeatTimeout = seconds * 1000L
-                    inputHeartbeatTimeout.clearFocus()
-                    Toast.makeText(requireContext(), "心跳超时已设置为 ${seconds}秒", Toast.LENGTH_SHORT).show()
-                    
-                    // Restart service if enabled to apply new settings
-                    if (configManager.reverseConnectionEnabled) {
-                        restartReverseConnectionService()
-                    }
-                } else {
-                    inputHeartbeatTimeout.error = "范围: 1-60秒"
-                }
+                saveHeartbeatTimeout(inputHeartbeatTimeout)
+                inputHeartbeatTimeout.clearFocus()
                 true
             } else {
                 false
             }
         }
         
+        inputHeartbeatTimeout.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                saveHeartbeatTimeout(inputHeartbeatTimeout)
+            }
+        }
+        
         // Reconnect Interval
         inputReconnectInterval.setOnEditorActionListener { v, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
-                val seconds = v.text.toString().toIntOrNull()
-                if (seconds != null && seconds in 1..120) {
-                    configManager.reconnectInterval = seconds * 1000L
-                    inputReconnectInterval.clearFocus()
-                    Toast.makeText(requireContext(), "重连间隔已设置为 ${seconds}秒", Toast.LENGTH_SHORT).show()
-                    
-                    // Restart service if enabled to apply new settings
-                    if (configManager.reverseConnectionEnabled) {
-                        restartReverseConnectionService()
-                    }
-                } else {
-                    inputReconnectInterval.error = "范围: 1-120秒"
-                }
+                saveReconnectInterval(inputReconnectInterval)
+                inputReconnectInterval.clearFocus()
                 true
             } else {
                 false
+            }
+        }
+        
+        inputReconnectInterval.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                saveReconnectInterval(inputReconnectInterval)
             }
         }
 
@@ -495,6 +480,72 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         super.onDestroyView()
         // Unregister broadcast receiver
         LocalBroadcastManager.getInstance(requireContext()).unregisterReceiver(connectionStatusReceiver)
+    }
+    
+    private fun saveHeartbeatInterval(input: TextInputEditText) {
+        val seconds = input.text.toString().toIntOrNull()
+        if (seconds != null && seconds in 5..300) {
+            val oldValue = configManager.heartbeatInterval
+            val newValue = seconds * 1000L
+            if (oldValue != newValue) {
+                configManager.heartbeatInterval = newValue
+                
+                // Restart service if enabled to apply new settings
+                if (configManager.reverseConnectionEnabled) {
+                    restartReverseConnectionService()
+                }
+            }
+        } else {
+            // 恢复为当前配置值
+            input.setText((configManager.heartbeatInterval / 1000).toString())
+            if (seconds != null) {
+                input.error = "范围: 5-300秒"
+            }
+        }
+    }
+    
+    private fun saveHeartbeatTimeout(input: TextInputEditText) {
+        val seconds = input.text.toString().toIntOrNull()
+        if (seconds != null && seconds in 1..60) {
+            val oldValue = configManager.heartbeatTimeout
+            val newValue = seconds * 1000L
+            if (oldValue != newValue) {
+                configManager.heartbeatTimeout = newValue
+                
+                // Restart service if enabled to apply new settings
+                if (configManager.reverseConnectionEnabled) {
+                    restartReverseConnectionService()
+                }
+            }
+        } else {
+            // 恢复为当前配置值
+            input.setText((configManager.heartbeatTimeout / 1000).toString())
+            if (seconds != null) {
+                input.error = "范围: 1-60秒"
+            }
+        }
+    }
+    
+    private fun saveReconnectInterval(input: TextInputEditText) {
+        val seconds = input.text.toString().toIntOrNull()
+        if (seconds != null && seconds in 1..120) {
+            val oldValue = configManager.reconnectInterval
+            val newValue = seconds * 1000L
+            if (oldValue != newValue) {
+                configManager.reconnectInterval = newValue
+                
+                // Restart service if enabled to apply new settings
+                if (configManager.reverseConnectionEnabled) {
+                    restartReverseConnectionService()
+                }
+            }
+        } else {
+            // 恢复为当前配置值
+            input.setText((configManager.reconnectInterval / 1000).toString())
+            if (seconds != null) {
+                input.error = "范围: 1-120秒"
+            }
+        }
     }
     
     private fun restartReverseConnectionService() {
