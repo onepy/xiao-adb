@@ -15,95 +15,25 @@ import org.json.JSONObject
  * These tools expose existing Android functionality via MCP protocol
  */
 
-// 1. GetStateTool - 获取屏幕XML数据
-class GetStateTool(private val apiHandler: ApiHandler) : McpToolHandler {
-    
-    companion object {
-        private const val TAG = "GetStateTool"
-        
-        fun getToolDefinition(): McpTool {
-            val inputSchema = JSONObject().apply {
-                put("type", "object")
-                put("properties", JSONObject().apply {
-                    put("filter", JSONObject().apply {
-                        put("type", "boolean")
-                        put("description", "Whether to filter out off-screen elements (default: true)")
-                        put("default", true)
-                    })
-                })
+/**
+ * Helper function to get simplified screen XML
+ */
+private fun getSimplifiedScreenXml(apiHandler: ApiHandler): JSONObject? {
+    return try {
+        when (val response = apiHandler.getStateFull(true)) {
+            is ApiResponse.Success -> {
+                val cleanedData = A11yTreeCleaner.cleanA11yTree(response.data as String)
+                JSONObject(cleanedData)
             }
-            
-            return McpTool(
-                name = "android.screen.dump",
-                description = """
-                    快速获取当前屏幕的可交互元素列表（文本、按钮、输入框等的坐标和ID）。
-                    
-                    **重要:** 此工具仅返回元素的结构化数据，不包含视觉内容。无法理解界面的实际内容和布局。
-                    
-                    **使用场景:**
-                    - 在已知界面内容后，快速定位可交互元素的坐标
-                    - 重复查找特定元素进行操作（如循环点击）
-                    - 获取元素的resource-id等属性用于精确定位
-                    
-                    **不适用场景:**
-                    - 初次了解界面内容 → 请先使用截图工具(screenshot)识别界面
-                    - 理解界面布局和视觉设计 → 请使用截图工具
-                    
-                    **典型工作流:**
-                    1. 使用截图工具了解界面内容
-                    2. 使用本工具获取元素坐标和ID
-                    3. 执行点击、输入等操作
-                    
-                    **参数:**
-                    - `filter` (boolean, 可选, 默认: `true`):
-                      - `true`: 仅返回屏幕可见元素
-                      - `false`: 返回所有元素（包括屏幕外）
-                """.trimIndent(),
-                inputSchema = inputSchema
-            )
+            else -> null
         }
-    }
-    
-    override fun execute(arguments: JSONObject?): JSONObject {
-        return try {
-            val filter = arguments?.optBoolean("filter", true) ?: true
-            
-            Log.i(TAG, "Getting state with filter=$filter")
-            
-            when (val response = apiHandler.getStateFull(filter)) {
-                is ApiResponse.Success -> {
-                    // 启用数据精简,返回结构化JSON
-                    val cleanedData = A11yTreeCleaner.cleanA11yTree(response.data as String)
-                    
-                    JSONObject().apply {
-                        put("success", true)
-                        put("data", JSONObject(cleanedData))
-                    }
-                }
-                is ApiResponse.Error -> {
-                    JSONObject().apply {
-                        put("success", false)
-                        put("error", response.message)
-                    }
-                }
-                else -> {
-                    JSONObject().apply {
-                        put("success", false)
-                        put("error", "Unexpected response type")
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting state", e)
-            JSONObject().apply {
-                put("success", false)
-                put("error", e.message ?: "Unknown error")
-            }
-        }
+    } catch (e: Exception) {
+        Log.e("AndroidTools", "Error getting simplified screen XML", e)
+        null
     }
 }
 
-// 2. GetPackagesTool - 获取已安装应用包名
+// 1. GetPackagesTool - 获取已安装应用包名
 class GetPackagesTool(private val apiHandler: ApiHandler) : McpToolHandler {
     
     companion object {
