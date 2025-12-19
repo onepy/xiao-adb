@@ -27,15 +27,22 @@ class DroidrunNotificationListener : NotificationListenerService() {
         if (sbn == null) return
 
         try {
+            // Check if notification events are enabled
+            if (!configManager.isEventEnabled(EventType.NOTIFICATION)) {
+                return
+            }
+            
             // Check if package is in whitelist
             val packageName = sbn.packageName
             val whitelist = configManager.getNotificationWhitelist()
             
             // If whitelist is not empty and package is not in whitelist, ignore
             if (whitelist.isNotEmpty() && !whitelist.contains(packageName)) {
-                Log.v(TAG, "Ignoring notification from $packageName (not in whitelist)")
+                Log.d(TAG, "Ignoring notification from $packageName (not in whitelist)")
                 return
             }
+            
+            Log.d(TAG, "Processing notification from $packageName (whitelist: ${whitelist.joinToString(",")})")
             
             // 1. Extract Data safely
             val extras = sbn.notification.extras

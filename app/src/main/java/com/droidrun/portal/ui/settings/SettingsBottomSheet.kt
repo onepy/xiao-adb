@@ -274,12 +274,6 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
                 toolDefinition = CalculatorTool.getToolDefinition()
             ),
             ToolInfo(
-                name = "android.screen.dump",
-                displayName = "Screen Dump",
-                description = "获取当前屏幕交互内容",
-                toolDefinition = com.droidrun.portal.mcp.tools.GetStateTool.getToolDefinition()
-            ),
-            ToolInfo(
                 name = "android.screen.vision",
                 displayName = "Screen Vision",
                 description = "AI视觉分析屏幕内容",
@@ -374,12 +368,6 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
                 displayName = "Set Text",
                 description = "设置控件文本",
                 toolDefinition = com.droidrun.portal.mcp.tools.SetTextTool.getToolDefinition()
-            ),
-            ToolInfo(
-                name = "android.element.toggle_checkbox",
-                displayName = "Toggle Checkbox",
-                description = "切换复选框状态",
-                toolDefinition = com.droidrun.portal.mcp.tools.ToggleCheckboxTool.getToolDefinition()
             ),
             ToolInfo(
                 name = "android.element.double_tap",

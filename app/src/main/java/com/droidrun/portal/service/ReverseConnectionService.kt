@@ -137,7 +137,6 @@ class ReverseConnectionService : Service() {
         tools["calculator"] = CalculatorTool()
         
         // Android operation tools (无障碍服务 - 基于坐标)
-        tools["android.screen.dump"] = GetStateTool(apiHandler)
         tools["android.screen.vision"] = ScreenVisionTool(apiHandler)
         tools["android.packages.list"] = GetPackagesTool(apiHandler)
         tools["android.launch_app"] = LaunchAppTool(apiHandler, this)
@@ -156,7 +155,6 @@ class ReverseConnectionService : Service() {
         tools["android.element.scroll"] = ScrollElementTool(apiHandler)
         tools["android.element.long_press"] = LongPressElementTool(apiHandler)
         tools["android.element.set_text"] = SetTextTool(apiHandler)
-        tools["android.element.toggle_checkbox"] = ToggleCheckboxTool(apiHandler)
         tools["android.element.double_tap"] = DoubleTapElementTool(apiHandler)
         tools["android.element.drag"] = DragElementTool(apiHandler)
         
@@ -345,7 +343,6 @@ class ReverseConnectionService : Service() {
         // Map of tool names to their definitions
         val toolDefinitions = mutableMapOf(
             "calculator" to CalculatorTool.getToolDefinition(),
-            "android.screen.dump" to GetStateTool.getToolDefinition(),
             "android.screen.vision" to ScreenVisionTool.getToolDefinition(),
             "android.packages.list" to GetPackagesTool.getToolDefinition(),
             "android.launch_app" to LaunchAppTool.getToolDefinition(),
@@ -362,7 +359,6 @@ class ReverseConnectionService : Service() {
             "android.element.scroll" to ScrollElementTool.getToolDefinition(),
             "android.element.long_press" to LongPressElementTool.getToolDefinition(),
             "android.element.set_text" to SetTextTool.getToolDefinition(),
-            "android.element.toggle_checkbox" to ToggleCheckboxTool.getToolDefinition(),
             "android.element.double_tap" to DoubleTapElementTool.getToolDefinition(),
             "android.element.drag" to DragElementTool.getToolDefinition()
         )

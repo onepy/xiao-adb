@@ -2,6 +2,8 @@ package com.droidrun.portal.mcp.tools
 
 import android.util.Log
 import com.droidrun.portal.api.ApiHandler
+import com.droidrun.portal.api.ApiResponse
+import com.droidrun.portal.core.A11yTreeCleaner
 import com.droidrun.portal.mcp.McpTool
 import org.json.JSONObject
 
@@ -9,6 +11,25 @@ import org.json.JSONObject
  * 基于控件的操作工具集合
  * 这些工具通过无障碍服务直接操作UI控件,比坐标操作更稳定可靠
  */
+
+/**
+ * 获取精简的屏幕XML状态
+ * 在操作完成后自动调用,提供实时的屏幕状态
+ */
+private fun getSimplifiedScreenXmlForElement(apiHandler: ApiHandler): JSONObject? {
+    return try {
+        when (val response = apiHandler.getStateFull(true)) {
+            is ApiResponse.Success -> {
+                val cleanedData = A11yTreeCleaner.cleanA11yTree(response.data as String)
+                JSONObject(cleanedData)
+            }
+            else -> null
+        }
+    } catch (e: Exception) {
+        Log.e("ScreenXml", "Error getting simplified XML", e)
+        null
+    }
+}
 
 /**
  * 控件查找辅助类
@@ -517,14 +538,20 @@ class ClickElementTool(private val apiHandler: ApiHandler) : McpToolHandler {
                     
                     val success = node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
                     
+                    if (success) {
+                        Thread.sleep(400)
+                    }
+                    val screenXml = if (success) getSimplifiedScreenXmlForElement(apiHandler) else null
+                    
                     JSONObject().apply {
                         put("success", success)
                         if (success) {
                             put("message", "Element clicked successfully")
-                            put("next_action", "请立即调用 android.screen.dump 工具确认点击操作是否生效")
+                            if (screenXml != null) {
+                                put("screen_state", screenXml)
+                            }
                         } else {
                             put("error", "Failed to perform click action")
-                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                         }
                     }
                 } finally {
@@ -647,14 +674,20 @@ class ScrollElementTool(private val apiHandler: ApiHandler) : McpToolHandler {
                     
                     val success = node.performAction(action)
                     
+                    if (success) {
+                        Thread.sleep(500)
+                    }
+                    val screenXml = if (success) getSimplifiedScreenXmlForElement(apiHandler) else null
+                    
                     JSONObject().apply {
                         put("success", success)
                         if (success) {
                             put("message", "Element scrolled $direction successfully")
-                            put("next_action", "请立即调用 android.screen.dump 工具确认滚动操作是否生效")
+                            if (screenXml != null) {
+                                put("screen_state", screenXml)
+                            }
                         } else {
                             put("error", "Failed to scroll element")
-                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                         }
                     }
                 } finally {
@@ -751,14 +784,20 @@ class LongPressElementTool(private val apiHandler: ApiHandler) : McpToolHandler 
                 try {
                     val success = node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_LONG_CLICK)
                     
+                    if (success) {
+                        Thread.sleep(400)
+                    }
+                    val screenXml = if (success) getSimplifiedScreenXmlForElement(apiHandler) else null
+                    
                     JSONObject().apply {
                         put("success", success)
                         if (success) {
                             put("message", "Element long pressed successfully")
-                            put("next_action", "请立即调用 android.screen.dump 工具确认长按操作是否生效")
+                            if (screenXml != null) {
+                                put("screen_state", screenXml)
+                            }
                         } else {
                             put("error", "Failed to long press element")
-                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                         }
                     }
                 } finally {
@@ -882,14 +921,20 @@ class SetTextTool(private val apiHandler: ApiHandler) : McpToolHandler {
                         arguments
                     )
                     
+                    if (success) {
+                        Thread.sleep(300)
+                    }
+                    val screenXml = if (success) getSimplifiedScreenXmlForElement(apiHandler) else null
+                    
                     JSONObject().apply {
                         put("success", success)
                         if (success) {
                             put("message", "Text set successfully")
-                            put("next_action", "请立即调用 android.screen.dump 工具确认文本是否成功设置")
+                            if (screenXml != null) {
+                                put("screen_state", screenXml)
+                            }
                         } else {
                             put("error", "Failed to set text")
-                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                         }
                     }
                 } finally {
@@ -911,122 +956,7 @@ class SetTextTool(private val apiHandler: ApiHandler) : McpToolHandler {
     }
 }
 
-// 6. ToggleCheckboxTool - 切换复选框状态
-class ToggleCheckboxTool(private val apiHandler: ApiHandler) : McpToolHandler {
-    
-    companion object {
-        private const val TAG = "ToggleCheckboxTool"
-        
-        fun getToolDefinition(): McpTool {
-            val inputSchema = JSONObject().apply {
-                put("type", "object")
-                put("properties", JSONObject().apply {
-                    put("resource_id", JSONObject().apply {
-                        put("type", "string")
-                        put("description", "控件的resource-id")
-                    })
-                    put("text", JSONObject().apply {
-                        put("type", "string")
-                        put("description", "控件包含的文本内容")
-                    })
-                    put("content_description", JSONObject().apply {
-                        put("type", "string")
-                        put("description", "控件的content-description")
-                    })
-                    put("class_name", JSONObject().apply {
-                        put("type", "string")
-                        put("description", "控件的类名")
-                    })
-                })
-            }
-            
-            return McpTool(
-                name = "android.element.toggle_checkbox",
-                description = """
-                    切换复选框、开关或单选按钮的选中状态。
-                    此工具通过控件属性定位可选中元素并切换其状态。
-                    
-                    **何时使用:**
-                    - 需要勾选或取消勾选复选框时
-                    - 需要切换开关状态时
-                    - 需要选择单选按钮时
-                    
-                    **参数:**
-                    - `resource_id` (string, 可选): 控件的resource-id
-                    - `text` (string, 可选): 控件显示的文本
-                    - `content_description` (string, 可选): 控件的无障碍描述
-                    - `class_name` (string, 可选): 控件的类名
-                    
-                    至少提供一个查找参数。
-                """.trimIndent(),
-                inputSchema = inputSchema
-            )
-        }
-    }
-    
-    override fun execute(arguments: JSONObject?): JSONObject {
-        return try {
-            val resourceId = arguments?.optString("resource_id", null)
-            val text = arguments?.optString("text", null)
-            val contentDescription = arguments?.optString("content_description", null)
-            val className = arguments?.optString("class_name", null)
-            
-            if (resourceId.isNullOrEmpty() && text.isNullOrEmpty() &&
-                contentDescription.isNullOrEmpty() && className.isNullOrEmpty()) {
-                return JSONObject().apply {
-                    put("success", false)
-                    put("error", "At least one search parameter is required")
-                }
-            }
-            
-            Log.i(TAG, "Toggling checkbox")
-            
-            val node = ElementFinder.find(resourceId, text, contentDescription, className)
-            
-            if (node != null) {
-                try {
-                    if (!node.isCheckable) {
-                        return JSONObject().apply {
-                            put("success", false)
-                            put("error", "Element is not checkable")
-                        }
-                    }
-                    
-                    val wasChecked = node.isChecked
-                    val success = node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
-                    
-                    JSONObject().apply {
-                        put("success", success)
-                        if (success) {
-                            put("message", "Checkbox toggled from ${if (wasChecked) "checked" else "unchecked"} to ${if (!wasChecked) "checked" else "unchecked"}")
-                            put("previous_state", wasChecked)
-                            put("new_state", !wasChecked)
-                            put("next_action", "请立即调用 android.screen.dump 工具确认复选框状态是否改变")
-                        } else {
-                            put("error", "Failed to toggle checkbox")
-                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
-                        }
-                    }
-                } finally {
-                    node.recycle()
-                }
-            } else {
-                JSONObject().apply {
-                    put("success", false)
-                    put("error", "Element not found")
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error toggling checkbox", e)
-            JSONObject().apply {
-                put("success", false)
-                put("error", e.message ?: "Unknown error")
-            }
-        }
-    }
-}
-
-// 7. DoubleTapElementTool - 双击控件
+// 6. DoubleTapElementTool - 双击控件
 class DoubleTapElementTool(private val apiHandler: ApiHandler) : McpToolHandler {
     
     companion object {
@@ -1106,14 +1036,20 @@ class DoubleTapElementTool(private val apiHandler: ApiHandler) : McpToolHandler 
                     
                     val success = success1 && success2
                     
+                    if (success) {
+                        Thread.sleep(400)
+                    }
+                    val screenXml = if (success) getSimplifiedScreenXmlForElement(apiHandler) else null
+                    
                     JSONObject().apply {
                         put("success", success)
                         if (success) {
                             put("message", "Element double tapped successfully")
-                            put("next_action", "请立即调用 android.screen.dump 工具确认双击操作是否生效")
+                            if (screenXml != null) {
+                                put("screen_state", screenXml)
+                            }
                         } else {
                             put("error", "Failed to double tap element")
-                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                         }
                     }
                 } finally {
@@ -1236,25 +1172,21 @@ class DragElementTool(private val apiHandler: ApiHandler) : McpToolHandler {
                     
                     when (val response = apiHandler.performSwipe(startX, startY, targetX, targetY, 500)) {
                         is com.droidrun.portal.api.ApiResponse.Success -> {
+                            Thread.sleep(500)
+                            val screenXml = getSimplifiedScreenXmlForElement(apiHandler)
+                            
                             JSONObject().apply {
                                 put("success", true)
                                 put("message", "Element dragged successfully from ($startX,$startY) to ($targetX,$targetY)")
-                                put("next_action", "请立即调用 android.screen.dump 工具确认拖动操作是否生效")
+                                if (screenXml != null) {
+                                    put("screen_state", screenXml)
+                                }
                             }
                         }
                         is com.droidrun.portal.api.ApiResponse.Error -> {
-                            val isNetworkError = response.message.contains("network", ignoreCase = true) ||
-                                                response.message.contains("timeout", ignoreCase = true) ||
-                                                response.message.contains("connection", ignoreCase = true)
-                            
                             JSONObject().apply {
                                 put("success", false)
                                 put("error", response.message)
-                                if (isNetworkError) {
-                                    put("next_action", "网络错误,请重新执行此操作，连续五次报错后再反馈用户")
-                                } else {
-                                    put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
-                                }
                             }
                         }
                         else -> {

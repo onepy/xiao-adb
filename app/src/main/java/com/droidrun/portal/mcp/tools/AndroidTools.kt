@@ -983,32 +983,27 @@ class SwipeTool(private val apiHandler: ApiHandler) : McpToolHandler {
             
             when (val response = apiHandler.performSwipe(startX, startY, endX, endY, duration)) {
                 is ApiResponse.Success -> {
+                    Thread.sleep(500)
+                    val screenXml = getSimplifiedScreenXml(apiHandler)
+                    
                     JSONObject().apply {
                         put("success", true)
                         put("message", response.data)
-                        put("next_action", "请立即调用 android.screen.dump 工具确认滑动操作是否生效")
+                        if (screenXml != null) {
+                            put("screen_state", screenXml)
+                        }
                     }
                 }
                 is ApiResponse.Error -> {
-                    val isNetworkError = response.message.contains("network", ignoreCase = true) ||
-                                        response.message.contains("timeout", ignoreCase = true) ||
-                                        response.message.contains("connection", ignoreCase = true)
-                    
                     JSONObject().apply {
                         put("success", false)
                         put("error", response.message)
-                        if (isNetworkError) {
-                            put("next_action", "网络错误,请重新执行此操作，连续五次报错后再反馈用户")
-                        } else {
-                            put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
-                        }
                     }
                 }
                 else -> {
                     JSONObject().apply {
                         put("success", false)
                         put("error", "Unexpected response type")
-                        put("next_action", "请立即调用 android.screen.get 工具截图确认当前界面状态")
                     }
                 }
             }
@@ -1304,26 +1299,24 @@ class ScreenVisionTool(private val apiHandler: ApiHandler) : McpToolHandler {
             
             when (val response = apiHandler.analyzeScreenWithVision(question)) {
                 is ApiResponse.Raw -> {
+                    // 获取精简的屏幕XML
+                    val screenXml = getSimplifiedScreenXml(apiHandler)
+                    
                     // Vision API返回的JSON响应
                     JSONObject().apply {
                         put("success", true)
                         put("analysis", response.json)
-                        put("message", "Screen analyzed successfully by AI")
+                        
+                        // 添加精简的屏幕XML
+                        if (screenXml != null) {
+                            put("screen_state", screenXml)
+                        }
                     }
                 }
                 is ApiResponse.Error -> {
-                    val isNetworkError = response.message.contains("network", ignoreCase = true) ||
-                                        response.message.contains("timeout", ignoreCase = true) ||
-                                        response.message.contains("connection", ignoreCase = true)
-                    
                     JSONObject().apply {
                         put("success", false)
                         put("error", response.message)
-                        if (isNetworkError) {
-                            put("next_action", "网络错误，请检查网络连接后重试")
-                        } else {
-                            put("next_action", "AI分析失败，可以尝试重新提问或使用android.screen.dump工具获取元素信息")
-                        }
                     }
                 }
                 else -> {
