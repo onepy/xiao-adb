@@ -539,7 +539,7 @@ class ClickElementTool(private val apiHandler: ApiHandler) : McpToolHandler {
                     val success = node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
                     
                     if (success) {
-                        Thread.sleep(400)
+                        Thread.sleep(300)
                     }
                     val screenXml = if (success) getSimplifiedScreenXmlForElement(apiHandler) else null
                     
@@ -675,7 +675,7 @@ class ScrollElementTool(private val apiHandler: ApiHandler) : McpToolHandler {
                     val success = node.performAction(action)
                     
                     if (success) {
-                        Thread.sleep(500)
+                        Thread.sleep(300)
                     }
                     val screenXml = if (success) getSimplifiedScreenXmlForElement(apiHandler) else null
                     
@@ -785,7 +785,7 @@ class LongPressElementTool(private val apiHandler: ApiHandler) : McpToolHandler 
                     val success = node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_LONG_CLICK)
                     
                     if (success) {
-                        Thread.sleep(400)
+                        Thread.sleep(300)
                     }
                     val screenXml = if (success) getSimplifiedScreenXmlForElement(apiHandler) else null
                     
@@ -1031,13 +1031,13 @@ class DoubleTapElementTool(private val apiHandler: ApiHandler) : McpToolHandler 
                 try {
                     // 执行两次点击操作来模拟双击
                     val success1 = node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
-                    Thread.sleep(100) // 短暂延迟
+                    Thread.sleep(800) // 短暂延迟
                     val success2 = node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
                     
                     val success = success1 && success2
                     
                     if (success) {
-                        Thread.sleep(400)
+                        Thread.sleep(300)
                     }
                     val screenXml = if (success) getSimplifiedScreenXmlForElement(apiHandler) else null
                     
@@ -1172,7 +1172,7 @@ class DragElementTool(private val apiHandler: ApiHandler) : McpToolHandler {
                     
                     when (val response = apiHandler.performSwipe(startX, startY, targetX, targetY, 500)) {
                         is com.droidrun.portal.api.ApiResponse.Success -> {
-                            Thread.sleep(500)
+                            Thread.sleep(300)
                             val screenXml = getSimplifiedScreenXmlForElement(apiHandler)
                             
                             JSONObject().apply {

@@ -327,9 +327,15 @@ class InputTextTool(private val apiHandler: ApiHandler) : McpToolHandler {
             
             when (val response = apiHandler.keyboardInput(base64Text, clear)) {
                 is ApiResponse.Success -> {
+                    Thread.sleep(500)
+                    val screenXml = getSimplifiedScreenXml(apiHandler)
+                    
                     JSONObject().apply {
                         put("success", true)
                         put("message", response.data)
+                        if (screenXml != null) {
+                            put("screen_state", screenXml)
+                        }
                     }
                 }
                 is ApiResponse.Error -> {
@@ -393,9 +399,15 @@ class ClearTextTool(private val apiHandler: ApiHandler) : McpToolHandler {
             
             when (val response = apiHandler.keyboardClear()) {
                 is ApiResponse.Success -> {
+                    Thread.sleep(500)
+                    val screenXml = getSimplifiedScreenXml(apiHandler)
+                    
                     JSONObject().apply {
                         put("success", true)
                         put("message", response.data)
+                        if (screenXml != null) {
+                            put("screen_state", screenXml)
+                        }
                     }
                 }
                 is ApiResponse.Error -> {
@@ -480,9 +492,15 @@ class PressKeyTool(private val apiHandler: ApiHandler) : McpToolHandler {
             
             when (val response = apiHandler.keyboardKey(keyCode)) {
                 is ApiResponse.Success -> {
+                    Thread.sleep(500)
+                    val screenXml = getSimplifiedScreenXml(apiHandler)
+                    
                     JSONObject().apply {
                         put("success", true)
                         put("message", response.data)
+                        if (screenXml != null) {
+                            put("screen_state", screenXml)
+                        }
                     }
                 }
                 is ApiResponse.Error -> {
@@ -564,9 +582,15 @@ class TapTool(private val apiHandler: ApiHandler) : McpToolHandler {
             
             when (val response = apiHandler.performTap(x, y)) {
                 is ApiResponse.Success -> {
+                    Thread.sleep(500)
+                    val screenXml = getSimplifiedScreenXml(apiHandler)
+                    
                     JSONObject().apply {
                         put("success", true)
                         put("message", response.data)
+                        if (screenXml != null) {
+                            put("screen_state", screenXml)
+                        }
                     }
                 }
                 is ApiResponse.Error -> {
@@ -648,9 +672,15 @@ class DoubleTapTool(private val apiHandler: ApiHandler) : McpToolHandler {
             
             when (val response = apiHandler.performDoubleTap(x, y)) {
                 is ApiResponse.Success -> {
+                    Thread.sleep(500)
+                    val screenXml = getSimplifiedScreenXml(apiHandler)
+                    
                     JSONObject().apply {
                         put("success", true)
                         put("message", response.data)
+                        if (screenXml != null) {
+                            put("screen_state", screenXml)
+                        }
                     }
                 }
                 is ApiResponse.Error -> {
@@ -738,9 +768,15 @@ class LongPressTool(private val apiHandler: ApiHandler) : McpToolHandler {
             
             when (val response = apiHandler.performLongPress(x, y, duration)) {
                 is ApiResponse.Success -> {
+                    Thread.sleep(500)
+                    val screenXml = getSimplifiedScreenXml(apiHandler)
+                    
                     JSONObject().apply {
                         put("success", true)
                         put("message", response.data)
+                        if (screenXml != null) {
+                            put("screen_state", screenXml)
+                        }
                     }
                 }
                 is ApiResponse.Error -> {
